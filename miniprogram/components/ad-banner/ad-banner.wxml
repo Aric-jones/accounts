@@ -1,0 +1,3 @@
+<view class="ad-container" wx:if="{{show}}">
+  <ad unit-id="{{unitId}}" ad-type="{{adType}}" ad-theme="{{theme === 'dark' ? 'black' : 'white'}}" binderror="onAdError" bindload="onAdLoad"></ad>
+</view>

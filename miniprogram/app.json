@@ -1,0 +1,55 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/create/create",
+    "pages/join/join",
+    "pages/room/room",
+    "pages/settlement/settlement",
+    "pages/history/history",
+    "pages/analysis/analysis",
+    "pages/profile/profile"
+  ],
+  "window": {
+    "backgroundColor": "#FAFAF5",
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#1A6B4A",
+    "navigationBarTitleText": "牌记",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#1A6B4A",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "牌桌",
+        "iconPath": "images/tab-home.png",
+        "selectedIconPath": "images/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/history/history",
+        "text": "历史",
+        "iconPath": "images/tab-history.png",
+        "selectedIconPath": "images/tab-history-active.png"
+      },
+      {
+        "pagePath": "pages/analysis/analysis",
+        "text": "AI分析",
+        "iconPath": "images/tab-ai.png",
+        "selectedIconPath": "images/tab-ai-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/tab-profile.png",
+        "selectedIconPath": "images/tab-profile-active.png"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "cloud": true,
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

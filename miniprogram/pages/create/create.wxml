@@ -1,0 +1,69 @@
+<view class="container {{theme === 'dark' ? 'dark' : ''}}">
+  <!-- 房间名称 -->
+  <view class="card">
+    <view class="card-title">牌局名称</view>
+    <input class="input-field" placeholder="例如：周六掼蛋局" value="{{roomName}}" bindinput="onNameInput" maxlength="20" />
+  </view>
+
+  <!-- 游戏类型选择 -->
+  <view class="card">
+    <view class="card-title">选择玩法</view>
+    <view class="game-grid">
+      <view class="game-item {{selectedGame === item.key ? 'active' : ''}}" 
+            wx:for="{{gameTypes}}" wx:key="key"
+            bindtap="onSelectGame" data-key="{{item.key}}">
+        <text class="game-icon">{{item.icon}}</text>
+        <text class="game-name">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 玩家设置 -->
+  <view class="card">
+    <view class="card-title">玩家设置</view>
+    <view class="player-count-row">
+      <text class="label">人数</text>
+      <view class="stepper">
+        <view class="stepper-btn {{playerCount <= minPlayers ? 'disabled' : ''}}" bindtap="onDecreasePlayer">
+          <text>-</text>
+        </view>
+        <text class="stepper-value num">{{playerCount}}</text>
+        <view class="stepper-btn {{playerCount >= maxPlayers ? 'disabled' : ''}}" bindtap="onIncreasePlayer">
+          <text>+</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="divider"></view>
+
+    <!-- 玩家列表 -->
+    <view class="player-list">
+      <view class="player-item" wx:for="{{players}}" wx:key="index">
+        <view class="player-color" style="background:{{item.color}}">
+          <text>{{index + 1}}</text>
+        </view>
+        <input class="player-name-input" placeholder="玩家{{index + 1}}昵称" value="{{item.nickname}}" bindinput="onPlayerNameInput" data-index="{{index}}" />
+      </view>
+    </view>
+  </view>
+
+  <!-- 计分设置 -->
+  <view class="card">
+    <view class="card-title">计分设置</view>
+    <view class="setting-row">
+      <text class="label">每分对应金额</text>
+      <view class="amount-input-wrap">
+        <text class="amount-prefix">¥</text>
+        <input class="amount-input num" type="digit" value="{{unitPrice}}" bindinput="onUnitPriceInput" placeholder="1" />
+      </view>
+    </view>
+    <view class="setting-hint">设为0则只记分不记钱</view>
+  </view>
+
+  <!-- 创建按钮 -->
+  <view class="btn-area">
+    <button class="btn-primary btn-create" bindtap="onCreateRoom" loading="{{creating}}">
+      <text>🀄 开始牌局</text>
+    </button>
+  </view>
+</view>

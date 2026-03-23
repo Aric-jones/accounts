@@ -1,0 +1,35 @@
+.score-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.quick-btn {
+  width: 72rpx;
+  height: 60rpx;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.quick-btn.minus {
+  background: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
+}
+
+.quick-btn.plus {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22C55E;
+}
+
+.score-field {
+  width: 140rpx;
+  height: 60rpx;
+  border: 2rpx solid #E8E8E0;
+  border-radius: 12rpx;
+  text-align: center;
+  font-size: 32rpx;
+}

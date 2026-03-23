@@ -1,0 +1,105 @@
+<view class="container {{theme === 'dark' ? 'dark' : ''}}">
+  <!-- 结算头部 -->
+  <view class="settle-header">
+    <text class="settle-title">🎊 本局结束！</text>
+    <text class="settle-subtitle">{{room.name}} · 共{{totalRounds}}局</text>
+  </view>
+
+  <!-- 赢家展示 -->
+  <view class="winner-showcase" wx:if="{{winner}}">
+    <view class="winner-crown">👑</view>
+    <view class="winner-avatar" style="background:{{winner.color}}">
+      <image src="{{winner.avatarUrl}}" mode="aspectFill" wx:if="{{winner.avatarUrl}}"></image>
+      <text wx:else class="avatar-text">{{winner.nickname[0]}}</text>
+    </view>
+    <text class="winner-name">{{winner.nickname}}</text>
+    <text class="winner-label">今晚牌王</text>
+    <text class="winner-score num">+{{winner.totalScore}}</text>
+  </view>
+
+  <!-- 排名列表 -->
+  <view class="card rankings-card">
+    <view class="card-title">最终排名</view>
+    <view class="ranking-list">
+      <view class="ranking-item" wx:for="{{rankings}}" wx:key="id">
+        <view class="rank-pos">
+          <text class="rank-num" wx:if="{{index > 2}}">{{index + 1}}</text>
+          <text class="rank-medal" wx:if="{{index === 0}}">🥇</text>
+          <text class="rank-medal" wx:if="{{index === 1}}">🥈</text>
+          <text class="rank-medal" wx:if="{{index === 2}}">🥉</text>
+        </view>
+        <view class="rank-player">
+          <view class="rank-avatar" style="background:{{item.color}}">
+            <image src="{{item.avatarUrl}}" mode="aspectFill" wx:if="{{item.avatarUrl}}"></image>
+            <text wx:else>{{item.nickname[0]}}</text>
+          </view>
+          <text class="rank-name">{{item.nickname}}</text>
+        </view>
+        <view class="rank-score-area">
+          <text class="rank-score num {{item.totalScore > 0 ? 'positive' : item.totalScore < 0 ? 'negative' : ''}}">
+            {{item.scorePrefix}}{{item.totalScore}}
+          </text>
+          <text class="rank-amount" wx:if="{{unitPrice > 0}}">
+            ¥{{item.amountText}}
+          </text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- AI智能转账方案 -->
+  <view class="card transfer-card" wx:if="{{transfers.length > 0}}">
+    <view class="card-title">💡 AI最优转账方案</view>
+    <view class="card-desc">最少{{transfers.length}}笔转账即可结清</view>
+    <view class="transfer-list">
+      <view class="transfer-item" wx:for="{{transfers}}" wx:key="index">
+        <view class="transfer-from">
+          <view class="transfer-avatar" style="background:{{item.from.color}}">
+            <text>{{item.from.nickname[0]}}</text>
+          </view>
+          <text class="transfer-name">{{item.from.nickname}}</text>
+        </view>
+        <view class="transfer-arrow">
+          <view class="arrow-line"></view>
+          <text class="arrow-amount num">¥{{item.amount}}</text>
+          <view class="arrow-head">→</view>
+        </view>
+        <view class="transfer-to">
+          <view class="transfer-avatar" style="background:{{item.to.color}}">
+            <text>{{item.to.nickname[0]}}</text>
+          </view>
+          <text class="transfer-name">{{item.to.nickname}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- AI牌局摘要 -->
+  <view class="card ai-summary-card">
+    <view class="card-title">🤖 AI牌局点评</view>
+    <view class="ai-summary-content">
+      <text class="ai-summary-text" wx:if="{{aiSummary}}">{{aiSummary}}</text>
+      <view class="loading" wx:else>
+        <view class="loading-dot"></view>
+        <view class="loading-dot"></view>
+        <view class="loading-dot"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="btn-group">
+    <button class="btn-primary btn-share" bindtap="onSharePoster">
+      📤 分享战绩
+    </button>
+    <view class="btn-row">
+      <button class="btn-outline btn-again" bindtap="onPlayAgain">再来一局</button>
+      <button class="btn-outline btn-home" bindtap="onGoHome">返回首页</button>
+    </view>
+  </view>
+
+  <!-- 广告位 -->
+  <view class="ad-area" wx:if="{{showAd}}">
+    <ad unit-id="{{adUnitId}}" ad-type="banner" ad-theme="white"></ad>
+  </view>
+</view>

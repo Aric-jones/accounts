@@ -1,0 +1,108 @@
+<view class="container {{theme === 'dark' ? 'dark' : ''}}">
+  <!-- 顶部欢迎区域 -->
+  <view class="header">
+    <view class="header-bg"></view>
+    <view class="header-content">
+      <view class="welcome-row">
+        <view class="welcome-info">
+          <text class="welcome-text">今晚来一局？</text>
+          <text class="welcome-sub">记录每一局的精彩</text>
+        </view>
+        <view class="avatar-wrap" bindtap="onTapAvatar">
+          <image class="user-avatar" src="{{userInfo.avatarUrl || ''}}" mode="aspectFill" wx:if="{{userInfo.avatarUrl}}"></image>
+          <view class="user-avatar-placeholder" wx:else>
+            <text>👤</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 核心操作按钮 -->
+  <view class="action-area">
+    <view class="btn-create" bindtap="onCreateRoom">
+      <text class="btn-icon">🀄</text>
+      <text class="btn-text">开一桌</text>
+    </view>
+    <view class="btn-join" bindtap="onJoinRoom">
+      <text class="btn-icon">🎯</text>
+      <text class="btn-text">加入牌局</text>
+    </view>
+  </view>
+
+  <!-- 进行中的牌局 -->
+  <view class="section" wx:if="{{activeRooms.length > 0}}">
+    <view class="section-header">
+      <text class="section-title">进行中</text>
+      <text class="section-badge">{{activeRooms.length}}</text>
+    </view>
+    <view class="room-card active-room" wx:for="{{activeRooms}}" wx:key="_id" bindtap="onEnterRoom" data-room="{{item}}">
+      <view class="room-card-top">
+        <view class="room-name-row">
+          <text class="room-game-icon">{{item.gameIcon}}</text>
+          <text class="room-name">{{item.name}}</text>
+        </view>
+        <view class="tag tag-playing">进行中</view>
+      </view>
+      <view class="room-card-body">
+        <view class="room-players">
+          <view class="player-avatar-stack">
+            <view class="stack-avatar" wx:for="{{item.players}}" wx:for-item="player" wx:key="id" wx:if="{{index < 4}}" style="background:{{player.color}};margin-left:{{index > 0 ? '-16rpx' : '0'}}">
+              <image src="{{player.avatarUrl}}" mode="aspectFill" wx:if="{{player.avatarUrl}}"></image>
+              <text wx:else>{{player.nickname[0] || '?'}}</text>
+            </view>
+            <view class="stack-avatar more" wx:if="{{item.players.length > 4}}" style="margin-left:-16rpx">
+              <text>+{{item.players.length - 4}}</text>
+            </view>
+          </view>
+          <text class="room-player-count">{{item.players.length}}人</text>
+        </view>
+        <view class="room-info-row">
+          <text class="room-rounds">第{{item.currentRound}}局</text>
+          <text class="room-time">{{item.timeAgo}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最近牌局 -->
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">最近牌局</text>
+      <text class="section-more" bindtap="onViewHistory">查看全部</text>
+    </view>
+
+    <view wx:if="{{recentRooms.length === 0}}" class="empty-state">
+      <text class="empty-icon">🃏</text>
+      <text class="empty-text">还没有牌局记录</text>
+      <text class="empty-hint">开一桌试试吧</text>
+    </view>
+
+    <view class="room-card" wx:for="{{recentRooms}}" wx:key="_id" bindtap="onEnterRoom" data-room="{{item}}">
+      <view class="room-card-top">
+        <view class="room-name-row">
+          <text class="room-game-icon">{{item.gameIcon}}</text>
+          <text class="room-name">{{item.name}}</text>
+        </view>
+        <view class="tag tag-settled">已结算</view>
+      </view>
+      <view class="room-card-body">
+        <view class="room-players">
+          <view class="player-avatar-stack">
+            <view class="stack-avatar" wx:for="{{item.players}}" wx:for-item="player" wx:key="id" wx:if="{{index < 4}}" style="background:{{player.color}};margin-left:{{index > 0 ? '-16rpx' : '0'}}">
+              <image src="{{player.avatarUrl}}" mode="aspectFill" wx:if="{{player.avatarUrl}}"></image>
+              <text wx:else>{{player.nickname[0] || '?'}}</text>
+            </view>
+          </view>
+          <text class="room-player-count">{{item.players.length}}人 · {{item.totalRounds}}局</text>
+        </view>
+        <view class="room-info-row">
+          <text class="room-winner text-accent" wx:if="{{item.winner}}">🏆 {{item.winner.nickname}} +{{item.winner.totalScore}}</text>
+          <text class="room-time">{{item.timeAgo}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="bottom-safe"></view>
+</view>

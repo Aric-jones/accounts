@@ -1,0 +1,175 @@
+/* 个人中心页样式 */
+.container {
+  padding: 0 0 120rpx 0;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+/* 用户信息头部 */
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 28rpx;
+  padding: 48rpx 32rpx;
+  background: linear-gradient(135deg, var(--color-primary) 0%, #2E8B63 100%);
+}
+
+.avatar-btn {
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  line-height: normal;
+}
+
+.avatar-btn::after {
+  border: none;
+}
+
+.profile-avatar {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+  border: 6rpx solid rgba(255,255,255,0.3);
+}
+
+.profile-avatar-placeholder {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56rpx;
+  border: 6rpx solid rgba(255,255,255,0.3);
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.nickname-input {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  background: none;
+  padding: 0;
+}
+
+.nickname-input::placeholder {
+  color: rgba(255,255,255,0.6);
+}
+
+.profile-id {
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.7);
+}
+
+/* 数据概览 */
+.stats-row {
+  display: flex;
+  justify-content: space-around;
+  padding: 32rpx;
+  background: var(--color-card);
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx var(--color-shadow);
+}
+
+.stat-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.stat-num {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.stat-num.positive { color: var(--color-success); }
+.stat-num.negative { color: var(--color-danger); }
+
+.stat-name {
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+}
+
+/* 菜单列表 */
+.menu-section {
+  background: var(--color-card);
+  margin: 0 32rpx;
+  border-radius: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 16rpx var(--color-shadow);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 32rpx;
+  border-bottom: 1rpx solid var(--color-border);
+  position: relative;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-item:active {
+  background: var(--color-bg);
+}
+
+.menu-icon {
+  font-size: 36rpx;
+  margin-right: 20rpx;
+  width: 44rpx;
+  text-align: center;
+}
+
+.menu-text {
+  flex: 1;
+  font-size: 30rpx;
+  color: var(--color-text);
+}
+
+.menu-arrow {
+  font-size: 36rpx;
+  color: var(--color-text-secondary);
+}
+
+.feedback-btn, .share-btn-hidden {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+}
+
+/* 版本信息 */
+.version-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48rpx;
+  color: var(--color-text-secondary);
+  font-size: 24rpx;
+  gap: 4rpx;
+}
+
+.version-sub {
+  font-size: 22rpx;
+  opacity: 0.7;
+}
+
+/* 广告位 */
+.ad-area {
+  margin: 0 32rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+}

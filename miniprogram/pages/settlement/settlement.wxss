@@ -1,0 +1,322 @@
+/* 结算页样式 */
+.container {
+  padding: 32rpx;
+  min-height: 100vh;
+  background: var(--color-bg);
+}
+
+/* 结算头部 */
+.settle-header {
+  text-align: center;
+  margin-bottom: 32rpx;
+}
+
+.settle-title {
+  font-size: 48rpx;
+  font-weight: 800;
+  color: var(--color-text);
+  display: block;
+}
+
+.settle-subtitle {
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+  margin-top: 8rpx;
+  display: block;
+}
+
+/* 赢家展示 */
+.winner-showcase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40rpx;
+  margin-bottom: 32rpx;
+  background: linear-gradient(135deg, rgba(212, 167, 44, 0.1) 0%, rgba(212, 167, 44, 0.02) 100%);
+  border-radius: 32rpx;
+  border: 2rpx solid rgba(212, 167, 44, 0.2);
+  position: relative;
+}
+
+.winner-crown {
+  font-size: 64rpx;
+  margin-bottom: 16rpx;
+  animation: crownBounce 2s ease-in-out infinite;
+}
+
+@keyframes crownBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12rpx); }
+}
+
+.winner-avatar {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16rpx;
+  border: 6rpx solid rgba(212, 167, 44, 0.5);
+  overflow: hidden;
+}
+
+.winner-avatar image {
+  width: 100%;
+  height: 100%;
+}
+
+.winner-avatar .avatar-text {
+  font-size: 52rpx;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.winner-name {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.winner-label {
+  font-size: 24rpx;
+  color: var(--color-accent);
+  font-weight: 600;
+  margin-top: 4rpx;
+  background: rgba(212, 167, 44, 0.15);
+  padding: 4rpx 24rpx;
+  border-radius: 20rpx;
+}
+
+.winner-score {
+  font-size: 56rpx;
+  font-weight: 800;
+  color: var(--color-success);
+  margin-top: 12rpx;
+}
+
+/* 排名卡片 */
+.card {
+  background: var(--color-card);
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx var(--color-shadow);
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 24rpx;
+}
+
+.card-desc {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  margin-top: -16rpx;
+  margin-bottom: 24rpx;
+}
+
+.ranking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.ranking-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.ranking-item:last-child {
+  border-bottom: none;
+}
+
+.rank-pos {
+  width: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rank-num {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.rank-medal {
+  font-size: 40rpx;
+}
+
+.rank-player {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex: 1;
+}
+
+.rank-avatar {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.rank-avatar image {
+  width: 100%;
+  height: 100%;
+}
+
+.rank-avatar text {
+  font-size: 24rpx;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.rank-name {
+  font-size: 28rpx;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.rank-score-area {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.rank-score {
+  font-size: 36rpx;
+  font-weight: 700;
+}
+
+.rank-score.positive { color: var(--color-success); }
+.rank-score.negative { color: var(--color-danger); }
+
+.rank-amount {
+  font-size: 22rpx;
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+/* 转账方案 */
+.transfer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 28rpx;
+}
+
+.transfer-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.transfer-from, .transfer-to {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  min-width: 120rpx;
+}
+
+.transfer-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.transfer-avatar text {
+  font-size: 24rpx;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+.transfer-name {
+  font-size: 24rpx;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.transfer-arrow {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  flex: 1;
+  justify-content: center;
+  position: relative;
+}
+
+.arrow-line {
+  width: 80rpx;
+  height: 3rpx;
+  background: var(--color-primary);
+}
+
+.arrow-amount {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--color-accent);
+  position: absolute;
+  top: -36rpx;
+}
+
+.arrow-head {
+  font-size: 28rpx;
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* AI摘要 */
+.ai-summary-card {
+  background: linear-gradient(135deg, var(--color-card) 0%, rgba(26, 107, 74, 0.03) 100%);
+}
+
+.ai-summary-content {
+  min-height: 120rpx;
+}
+
+.ai-summary-text {
+  font-size: 28rpx;
+  color: var(--color-text);
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+/* 按钮组 */
+.btn-group {
+  margin-top: 32rpx;
+  margin-bottom: 48rpx;
+}
+
+.btn-share {
+  margin-bottom: 24rpx;
+}
+
+.btn-row {
+  display: flex;
+  gap: 20rpx;
+}
+
+.btn-row .btn-outline {
+  flex: 1;
+}
+
+/* 广告位 */
+.ad-area {
+  margin-top: 32rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+}

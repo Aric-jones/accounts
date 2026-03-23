@@ -1,0 +1,131 @@
+<view class="container {{theme === 'dark' ? 'dark' : ''}}">
+  <!-- 顶部信息栏 -->
+  <view class="room-header">
+    <view class="room-header-left">
+      <text class="room-title">{{room.name}}</text>
+      <view class="room-meta">
+        <text class="room-game-type">{{room.gameTypeName}}</text>
+        <text class="room-round-info">第 <text class="num">{{currentRound}}</text> 局</text>
+      </view>
+    </view>
+    <view class="room-header-right">
+      <view class="share-code-badge" bindtap="onCopyCode">
+        <text class="share-code-label">房间码</text>
+        <text class="share-code-text num">{{room.shareCode}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 玩家得分区域 -->
+  <view class="players-area">
+    <view class="player-grid player-grid-{{room.players.length}}">
+      <view class="player-card-wrap" wx:for="{{room.players}}" wx:key="id" 
+            bindtap="onTapPlayer" data-index="{{index}}">
+        <view class="player-card {{item.isLeading ? 'leading' : ''}}">
+          <!-- 领先标记 -->
+          <view class="leading-badge" wx:if="{{item.isLeading}}">
+            <text>👑</text>
+          </view>
+          <!-- 头像区 -->
+          <view class="player-avatar" style="background:{{item.color}}">
+            <image src="{{item.avatarUrl}}" mode="aspectFill" wx:if="{{item.avatarUrl}}"></image>
+            <text wx:else class="avatar-text">{{item.nickname[0] || '?'}}</text>
+          </view>
+          <!-- 昵称 -->
+          <text class="player-nickname">{{item.nickname}}</text>
+          <!-- 总分 -->
+          <view class="player-score">
+            <text class="score-value num {{item.totalScore > 0 ? 'positive' : item.totalScore < 0 ? 'negative' : ''}}">
+              {{item.totalScore > 0 ? '+' : ''}}{{item.totalScore}}
+            </text>
+          </view>
+          <!-- 本局得分（如果正在输入） -->
+          <view class="player-current" wx:if="{{showScoreInput && currentScores[item.id] !== undefined}}">
+            <text class="current-label">本局</text>
+            <text class="current-value num {{currentScores[item.id] > 0 ? 'positive' : currentScores[item.id] < 0 ? 'negative' : ''}}">
+              {{currentScores[item.id] > 0 ? '+' : ''}}{{currentScores[item.id]}}
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 每局记录时间线 -->
+  <view class="rounds-timeline" wx:if="{{room.rounds.length > 0}}">
+    <view class="timeline-header">
+      <text class="timeline-title">对局记录</text>
+      <text class="timeline-count">共{{room.rounds.length}}局</text>
+    </view>
+    <scroll-view scroll-x class="timeline-scroll">
+      <view class="timeline-items">
+        <view class="timeline-item" wx:for="{{room.rounds}}" wx:key="roundNum">
+          <view class="timeline-round-num">R{{item.roundNum}}</view>
+          <view class="timeline-scores">
+            <view class="timeline-score-row" wx:for="{{room.players}}" wx:for-item="player" wx:key="id">
+              <text class="timeline-player-name">{{player.nickname[0]}}</text>
+              <text class="timeline-player-score num {{item.scores[player.id] > 0 ? 'positive' : item.scores[player.id] < 0 ? 'negative' : ''}}">
+                {{item.scores[player.id] > 0 ? '+' : ''}}{{item.scores[player.id] || 0}}
+              </text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 分数输入面板 -->
+  <view class="score-input-panel {{showScoreInput ? 'show' : ''}}">
+    <view class="panel-header">
+      <text class="panel-title">记录第 {{currentRound + 1}} 局</text>
+      <view class="panel-close" bindtap="onCloseScoreInput">✕</view>
+    </view>
+    <view class="score-inputs">
+      <view class="score-input-row" wx:for="{{room.players}}" wx:key="id">
+        <view class="input-player">
+          <view class="input-player-color" style="background:{{item.color}}">
+            <text>{{item.nickname[0] || '?'}}</text>
+          </view>
+          <text class="input-player-name">{{item.nickname}}</text>
+        </view>
+        <view class="input-score-wrap">
+          <view class="score-minus" bindtap="onQuickScore" data-id="{{item.id}}" data-delta="{{-10}}">-10</view>
+          <input class="score-input-field num" type="number" value="{{currentScores[item.id] || ''}}" 
+                 bindinput="onScoreInput" data-id="{{item.id}}" placeholder="0" />
+          <view class="score-plus" bindtap="onQuickScore" data-id="{{item.id}}" data-delta="{{10}}">+10</view>
+        </view>
+      </view>
+    </view>
+    <view class="score-sum-row">
+      <text class="score-sum-label">总和</text>
+      <text class="score-sum-value num {{scoreSum === 0 ? 'balanced' : 'unbalanced'}}">{{scoreSum}}</text>
+      <text class="score-sum-hint" wx:if="{{scoreSum !== 0}}">（建议总和为0）</text>
+    </view>
+    <button class="btn-primary btn-submit-score" bindtap="onSubmitScore">
+      ✓ 记录本局
+    </button>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="bottom-bar">
+    <view class="bar-btn bar-btn-secondary" bindtap="onUndo" wx:if="{{room.rounds.length > 0}}">
+      <text class="bar-btn-icon">↩️</text>
+      <text class="bar-btn-text">撤销</text>
+    </view>
+    <view class="bar-btn bar-btn-main" bindtap="onOpenScoreInput">
+      <text class="bar-btn-icon">✏️</text>
+      <text class="bar-btn-text">记一局</text>
+    </view>
+    <view class="bar-btn bar-btn-voice" bindtap="onVoiceScore">
+      <text class="bar-btn-icon">🎙️</text>
+      <text class="bar-btn-text">语音</text>
+    </view>
+    <view class="bar-btn bar-btn-end" bindtap="onEndGame">
+      <text class="bar-btn-icon">🏁</text>
+      <text class="bar-btn-text">结算</text>
+    </view>
+  </view>
+
+  <!-- 遮罩 -->
+  <view class="mask" wx:if="{{showScoreInput}}" bindtap="onCloseScoreInput"></view>
+</view>

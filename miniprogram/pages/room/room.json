@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "牌局进行中",
+  "usingComponents": {
+    "player-card": "/components/player-card/player-card",
+    "score-input": "/components/score-input/score-input"
+  }
+}

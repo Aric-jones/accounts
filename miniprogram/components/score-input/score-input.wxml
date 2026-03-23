@@ -1,0 +1,5 @@
+<view class="score-input-wrap">
+  <view class="quick-btn minus" bindtap="onQuickMinus">-{{step}}</view>
+  <input class="score-field num" type="number" value="{{value}}" bindinput="onInput" placeholder="0" />
+  <view class="quick-btn plus" bindtap="onQuickPlus">+{{step}}</view>
+</view>

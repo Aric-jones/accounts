@@ -1,0 +1,30 @@
+<view class="container {{theme === 'dark' ? 'dark' : ''}}">
+  <view class="join-header">
+    <text class="join-icon">🎯</text>
+    <text class="join-title">输入房间码</text>
+    <text class="join-desc">向房主索取6位房间码即可加入</text>
+  </view>
+
+  <view class="code-input-area">
+    <view class="code-boxes">
+      <view class="code-box {{index < codeLength ? 'filled' : ''}}" wx:for="{{6}}" wx:key="index">
+        <text class="code-char num">{{codeChars[index] || ''}}</text>
+      </view>
+    </view>
+    <input class="hidden-input" focus="{{true}}" value="{{shareCode}}" bindinput="onCodeInput" maxlength="6" type="text" />
+  </view>
+
+  <button class="btn-primary btn-join" bindtap="onJoinRoom" loading="{{joining}}" disabled="{{codeLength < 6}}">
+    加入牌局
+  </button>
+
+  <view class="divider-text">
+    <view class="divider-line"></view>
+    <text>或者</text>
+    <view class="divider-line"></view>
+  </view>
+
+  <button class="btn-outline btn-scan" bindtap="onScanCode">
+    📷 扫描二维码加入
+  </button>
+</view>

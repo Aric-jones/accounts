@@ -1,0 +1,81 @@
+<view class="container {{theme === 'dark' ? 'dark' : ''}}">
+  <!-- 用户信息 -->
+  <view class="profile-header">
+    <view class="profile-avatar-area">
+      <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+        <image class="profile-avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill" wx:if="{{userInfo.avatarUrl}}"></image>
+        <view class="profile-avatar-placeholder" wx:else>
+          <text>👤</text>
+        </view>
+      </button>
+    </view>
+    <view class="profile-info">
+      <input class="nickname-input" type="nickname" placeholder="点击设置昵称" value="{{userInfo.nickName}}" bindblur="onNicknameBlur" />
+      <text class="profile-id" wx:if="{{userInfo.id}}">ID: {{userInfo.id}}</text>
+    </view>
+  </view>
+
+  <!-- 数据概览 -->
+  <view class="stats-row">
+    <view class="stat-block">
+      <text class="stat-num num">{{stats.totalGames}}</text>
+      <text class="stat-name">牌局</text>
+    </view>
+    <view class="stat-block">
+      <text class="stat-num num">{{stats.totalRounds}}</text>
+      <text class="stat-name">总局数</text>
+    </view>
+    <view class="stat-block">
+      <text class="stat-num num">{{stats.winRate}}%</text>
+      <text class="stat-name">胜率</text>
+    </view>
+    <view class="stat-block">
+      <text class="stat-num num {{stats.totalScore >= 0 ? 'positive' : 'negative'}}">
+        {{stats.totalScore >= 0 ? '+' : ''}}{{stats.totalScore}}
+      </text>
+      <text class="stat-name">总战绩</text>
+    </view>
+  </view>
+
+  <!-- 功能列表 -->
+  <view class="menu-section">
+    <view class="menu-item" bindtap="onToggleTheme">
+      <text class="menu-icon">{{theme === 'dark' ? '☀️' : '🌙'}}</text>
+      <text class="menu-text">{{theme === 'dark' ? '切换亮色模式' : '切换深色模式'}}</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="onClearCache">
+      <text class="menu-icon">🗑️</text>
+      <text class="menu-text">清除缓存</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="onAbout">
+      <text class="menu-icon">ℹ️</text>
+      <text class="menu-text">关于牌记</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="onFeedback">
+      <text class="menu-icon">💬</text>
+      <text class="menu-text">意见反馈</text>
+      <button class="feedback-btn" open-type="feedback"></button>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" bindtap="onShare">
+      <text class="menu-icon">📤</text>
+      <text class="menu-text">分享给朋友</text>
+      <button class="share-btn-hidden" open-type="share"></button>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 版本信息 -->
+  <view class="version-info">
+    <text>牌记 v1.0.0</text>
+    <text class="version-sub">AI智能打牌记账</text>
+  </view>
+
+  <!-- Banner广告位 -->
+  <view class="ad-area">
+    <ad unit-id="YOUR_BANNER_AD_ID" ad-type="banner" ad-theme="white" binderror="onAdError"></ad>
+  </view>
+</view>

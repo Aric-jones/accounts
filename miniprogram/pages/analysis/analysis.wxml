@@ -1,0 +1,119 @@
+<view class="container {{theme === 'dark' ? 'dark' : ''}}">
+  <!-- AI一句话总结 -->
+  <view class="ai-hero">
+    <view class="ai-avatar">🤖</view>
+    <text class="ai-greeting">{{aiGreeting}}</text>
+  </view>
+
+  <!-- 手气指数 -->
+  <view class="card luck-card">
+    <view class="card-header">
+      <text class="card-title">🔥 手气指数</text>
+      <view class="share-btn" bindtap="onShareLuck">分享</view>
+    </view>
+    <view class="luck-ring-area">
+      <view class="luck-ring">
+        <canvas canvas-id="luckCanvas" class="luck-canvas"></canvas>
+        <view class="luck-center">
+          <text class="luck-score num">{{luckIndex}}</text>
+          <text class="luck-label">{{luckLabel}}</text>
+        </view>
+      </view>
+    </view>
+    <text class="luck-comment">{{luckComment}}</text>
+  </view>
+
+  <!-- 胜负趋势 -->
+  <view class="card trend-card">
+    <view class="card-header">
+      <text class="card-title">📊 近期走势</text>
+    </view>
+    <view class="trend-chart-area">
+      <view class="trend-bars">
+        <view class="trend-bar-wrap" wx:for="{{trendData}}" wx:key="index">
+          <view class="trend-bar {{item.value >= 0 ? 'positive' : 'negative'}}"
+                style="height:{{item.height}}rpx;">
+          </view>
+          <text class="trend-label">{{item.label}}</text>
+        </view>
+      </view>
+      <view class="trend-zero-line"></view>
+    </view>
+    <view class="trend-stats">
+      <view class="trend-stat">
+        <text class="trend-stat-value num positive">{{wins}}</text>
+        <text class="trend-stat-label">胜</text>
+      </view>
+      <view class="trend-stat">
+        <text class="trend-stat-value num negative">{{losses}}</text>
+        <text class="trend-stat-label">负</text>
+      </view>
+      <view class="trend-stat">
+        <text class="trend-stat-value num">{{winRate}}%</text>
+        <text class="trend-stat-label">胜率</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 玩家风格雷达 -->
+  <view class="card style-card">
+    <view class="card-header">
+      <text class="card-title">🎭 你的牌桌风格</text>
+    </view>
+    <view class="style-tag-area">
+      <view class="style-main-tag">
+        <text class="style-tag-icon">{{styleIcon}}</text>
+        <text class="style-tag-text">{{styleLabel}}</text>
+      </view>
+    </view>
+    <view class="style-dimensions">
+      <view class="dim-row" wx:for="{{dimensions}}" wx:key="name">
+        <text class="dim-name">{{item.name}}</text>
+        <view class="dim-bar-bg">
+          <view class="dim-bar-fill" style="width:{{item.value}}%"></view>
+        </view>
+        <text class="dim-value num">{{item.value}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最佳搭档 -->
+  <view class="card partner-card" wx:if="{{partners.length > 0}}">
+    <view class="card-header">
+      <text class="card-title">🤝 最佳牌友</text>
+    </view>
+    <view class="partner-list">
+      <view class="partner-item" wx:for="{{partners}}" wx:key="name">
+        <view class="partner-rank">{{index + 1}}</view>
+        <view class="partner-avatar" style="background:{{item.color}}">
+          <text>{{item.name[0]}}</text>
+        </view>
+        <text class="partner-name">{{item.name}}</text>
+        <text class="partner-games">{{item.games}}局</text>
+        <text class="partner-rate num">{{item.winRate}}%胜率</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- AI运势预测（趣味功能） -->
+  <view class="card fortune-card">
+    <view class="card-header">
+      <text class="card-title">🔮 今日运势预测</text>
+      <view class="share-btn" bindtap="onShareFortune">分享</view>
+    </view>
+    <view class="fortune-content">
+      <text class="fortune-stars">{{fortuneStars}}</text>
+      <text class="fortune-text">{{fortuneText}}</text>
+      <text class="fortune-tip">{{fortuneTip}}</text>
+    </view>
+  </view>
+
+  <!-- 解锁完整报告（激励广告触发点） -->
+  <view class="unlock-area" wx:if="{{!fullReportUnlocked}}">
+    <button class="btn-gold btn-unlock" bindtap="onUnlockFullReport">
+      🎬 观看广告解锁完整AI报告
+    </button>
+  </view>
+
+  <view class="bottom-safe"></view>
+</view>

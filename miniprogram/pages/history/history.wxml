@@ -1,0 +1,65 @@
+<view class="container {{theme === 'dark' ? 'dark' : ''}}">
+  <!-- 统计摘要 -->
+  <view class="stats-summary">
+    <view class="stat-item">
+      <text class="stat-value num">{{stats.totalGames}}</text>
+      <text class="stat-label">总牌局</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value num">{{stats.totalRounds}}</text>
+      <text class="stat-label">总局数</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value num {{stats.totalScore >= 0 ? 'positive' : 'negative'}}">
+        {{stats.totalScore >= 0 ? '+' : ''}}{{stats.totalScore}}
+      </text>
+      <text class="stat-label">总战绩</text>
+    </view>
+  </view>
+
+  <!-- 筛选 -->
+  <view class="filter-bar">
+    <view class="filter-item {{activeFilter === 'all' ? 'active' : ''}}" bindtap="onFilter" data-type="all">全部</view>
+    <view class="filter-item {{activeFilter === 'mahjong' ? 'active' : ''}}" bindtap="onFilter" data-type="mahjong">麻将</view>
+    <view class="filter-item {{activeFilter === 'guandan' ? 'active' : ''}}" bindtap="onFilter" data-type="guandan">掼蛋</view>
+    <view class="filter-item {{activeFilter === 'doudizhu' ? 'active' : ''}}" bindtap="onFilter" data-type="doudizhu">斗地主</view>
+    <view class="filter-item {{activeFilter === 'paodekuai' ? 'active' : ''}}" bindtap="onFilter" data-type="paodekuai">跑得快</view>
+  </view>
+
+  <!-- 历史列表 -->
+  <view wx:if="{{historyList.length === 0}}" class="empty-state">
+    <text class="empty-icon">📋</text>
+    <text class="empty-text">暂无历史记录</text>
+    <text class="empty-hint">开一桌开始记录吧</text>
+  </view>
+
+  <view class="history-list">
+    <view class="history-card" wx:for="{{historyList}}" wx:key="_id" bindtap="onTapHistory" data-room="{{item}}">
+      <view class="history-top">
+        <view class="history-name-row">
+          <text class="history-icon">{{item.gameIcon}}</text>
+          <text class="history-name">{{item.name}}</text>
+        </view>
+        <text class="history-date">{{item.dateStr}}</text>
+      </view>
+      <view class="history-body">
+        <view class="history-players">
+          <view class="h-player" wx:for="{{item.rankings}}" wx:for-item="player" wx:key="id" wx:if="{{index < 4}}">
+            <view class="h-avatar" style="background:{{player.color}}">
+              <text>{{player.nickname[0]}}</text>
+            </view>
+            <text class="h-score num {{player.totalScore > 0 ? 'positive' : player.totalScore < 0 ? 'negative' : ''}}">
+              {{player.totalScore > 0 ? '+' : ''}}{{player.totalScore}}
+            </text>
+          </view>
+        </view>
+        <view class="history-meta">
+          <text class="history-rounds">{{item.totalRounds}}局</text>
+          <text class="history-winner" wx:if="{{item.winner}}">🏆{{item.winner.nickname}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

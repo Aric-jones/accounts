@@ -1,0 +1,11 @@
+<view class="player-card {{isLeading ? 'leading' : ''}}">
+  <view class="leading-badge" wx:if="{{isLeading}}">👑</view>
+  <view class="p-avatar" style="background:{{color}}">
+    <image src="{{avatarUrl}}" mode="aspectFill" wx:if="{{avatarUrl}}"></image>
+    <text wx:else>{{nickname[0] || '?'}}</text>
+  </view>
+  <text class="p-name">{{nickname}}</text>
+  <text class="p-score num {{totalScore > 0 ? 'positive' : totalScore < 0 ? 'negative' : ''}}">
+    {{totalScore > 0 ? '+' : ''}}{{totalScore}}
+  </text>
+</view>

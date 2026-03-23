@@ -1,12 +1,15 @@
+const env = require('./config/env')
+
 App({
   onLaunch() {
-    if (wx.cloud) {
+    if (wx.cloud && env.CLOUD_ENV_ID) {
       try {
-        wx.cloud.init({ traceUser: true })
+        wx.cloud.init({ env: env.CLOUD_ENV_ID, traceUser: true })
       } catch (e) {
-        console.warn('云开发初始化失败，将使用本地存储模式', e)
+        console.warn('云开发初始化失败，使用本地存储模式', e)
       }
     }
+    this.globalData.env = env
     this.loadTheme()
     this.getUserProfile()
   },

@@ -1,6 +1,5 @@
 const { GAME_TYPES, formatRelativeTime, getDefaultAvatar } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
-const api = require('../../utils/api')
 
 Page({
   data: {
@@ -9,7 +8,7 @@ Page({
     userInfo: null,
     activeRooms: [],
     recentRooms: [],
-    loading: true
+    loading: false
   },
 
   onLoad() {
@@ -24,45 +23,20 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.loadRooms().then(() => {
-      wx.stopPullDownRefresh()
-    })
+    this.loadRooms()
+    wx.stopPullDownRefresh()
   },
 
-  async loadRooms() {
-    this.setData({ loading: true })
-    try {
-      const db = wx.cloud.database()
-      const _ = db.command
-      const openid = getApp().globalData.openid
-
-      // 本地存储的房间ID列表
-      const myRoomIds = wx.getStorageSync('myRoomIds') || []
-
-      if (myRoomIds.length > 0) {
-        const res = await db.collection('rooms')
-          .where({ _id: _.in(myRoomIds) })
-          .orderBy('updatedAt', 'desc')
-          .limit(20)
-          .get()
-
-        const rooms = res.data.map(room => this.formatRoom(room))
-        const activeRooms = rooms.filter(r => r.status === 'playing')
-        const recentRooms = rooms.filter(r => r.status === 'settled').slice(0, 10)
-
-        this.setData({ activeRooms, recentRooms })
-      }
-    } catch (e) {
-      console.error('加载房间失败:', e)
-      this.loadFromLocal()
-    }
-    this.setData({ loading: false })
-  },
-
-  loadFromLocal() {
+  loadRooms() {
     const rooms = wx.getStorageSync('localRooms') || []
-    const activeRooms = rooms.filter(r => r.status === 'playing').map(r => this.formatRoom(r))
-    const recentRooms = rooms.filter(r => r.status === 'settled').slice(0, 10).map(r => this.formatRoom(r))
+    const activeRooms = rooms
+      .filter(r => r.status === 'playing')
+      .map(r => this.formatRoom(r))
+    const recentRooms = rooms
+      .filter(r => r.status === 'settled')
+      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+      .slice(0, 10)
+      .map(r => this.formatRoom(r))
     this.setData({ activeRooms, recentRooms })
   },
 
@@ -72,7 +46,6 @@ Page({
       ...p,
       color: getDefaultAvatar(i)
     }))
-
     return {
       ...room,
       gameIcon: gameInfo.icon,
@@ -95,9 +68,9 @@ Page({
   onEnterRoom(e) {
     const room = e.currentTarget.dataset.room
     if (room.status === 'playing') {
-      wx.navigateTo({ url: `/pages/room/room?id=${room._id}` })
+      wx.navigateTo({ url: '/pages/room/room?id=' + room._id })
     } else {
-      wx.navigateTo({ url: `/pages/settlement/settlement?id=${room._id}` })
+      wx.navigateTo({ url: '/pages/settlement/settlement?id=' + room._id })
     }
   },
 

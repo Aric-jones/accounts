@@ -49,7 +49,6 @@
     ]
   },
   "sitemapLocation": "sitemap.json",
-  "cloud": true,
   "style": "v2",
   "lazyCodeLoading": "requiredComponents"
 }

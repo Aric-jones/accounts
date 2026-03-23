@@ -1,8 +1,9 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
-// DeepSeek API配置（需替换为实际API Key）
-const DEEPSEEK_API_KEY = 'YOUR_DEEPSEEK_API_KEY'
+// DeepSeek API Key 从云函数环境变量读取（在云开发控制台设置）
+// 本地开发时从 event 传入
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || ''
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
 
 exports.main = async (event, context) => {

@@ -5,155 +5,172 @@
     <view class="room-header">
       <view class="room-header-left">
         <text class="room-title">{{room.name}}</text>
-        <text class="room-meta">{{room.gameTypeName}} · 第 {{currentRound}} 局</text>
+        <text class="room-meta">{{room.gameTypeName}} · ¥{{room.unitPrice}}/分</text>
       </view>
-      <view class="share-code-box" bindtap="onCopyCode">
-        <text class="code-label">房间码</text>
-        <text class="code-value">{{room.shareCode}}</text>
+      <view class="header-right">
+        <view class="share-code-box" bindtap="onCopyCode">
+          <text class="code-label">房间码</text>
+          <text class="code-value">{{room.shareCode}}</text>
+        </view>
       </view>
     </view>
 
-    <!-- 邀请区域 (没有开始记分时显示) -->
-    <view class="invite-area" wx:if="{{room.players.length < 2 || showInvite}}">
+    <!-- 操作栏 -->
+    <view class="action-bar">
+      <view class="action-left">
+        <view class="invite-toggle" bindtap="onToggleInvite" hover-class="btn-hover">{{showInvite ? '收起邀请' : '邀请玩家'}}</view>
+        <view class="add-player-btn" bindtap="onAddPlayer" hover-class="btn-hover">+ 添加</view>
+      </view>
+      <view class="action-right">
+        <view class="undo-btn" bindtap="onUndo" wx:if="{{room.transactions.length > 0}}" hover-class="btn-hover">撤销</view>
+        <view class="settle-btn" bindtap="onEndGame" hover-class="btn-hover">结算</view>
+      </view>
+    </view>
+
+    <!-- 邀请区域 -->
+    <view class="invite-area" wx:if="{{showInvite}}">
       <view class="invite-card">
-        <text class="invite-title">邀请牌友扫码加入</text>
-        <text class="invite-desc">让牌友用微信「扫一扫」扫描下方二维码</text>
-
-        <!-- 房间码大字展示 -->
-        <view class="big-code-area">
-          <view class="big-code-box">
-            <text class="big-code-char" wx:for="{{codeChars}}" wx:key="index">{{item}}</text>
-          </view>
-          <text class="big-code-hint">或告诉牌友输入此房间码</text>
+        <view class="big-code-box">
+          <text class="big-code-char" wx:for="{{codeChars}}" wx:key="index">{{item}}</text>
         </view>
-
-        <!-- 操作按钮 -->
+        <text class="big-code-hint">让牌友输入房间码或扫码加入</text>
         <view class="invite-btns">
-          <button class="btn-share-wx" open-type="share">
-            转发给朋友
-          </button>
-          <button class="btn-copy-code" bindtap="onCopyCode">
-            复制房间码
-          </button>
+          <button class="btn-share-wx" open-type="share">转发</button>
+          <button class="btn-copy-code" bindtap="onCopyCode">复制</button>
         </view>
       </view>
     </view>
 
-    <!-- 已加入的玩家列表 -->
+    <!-- 玩家列表（点击对方即支付） -->
     <view class="players-section">
-      <view class="section-head">
-        <text class="section-title">玩家 ({{room.players.length}}人)</text>
-        <view class="add-player-btn" bindtap="onAddPlayer" hover-class="btn-hover">
-          <text>+ 手动添加</text>
-        </view>
-      </view>
-
-      <view class="player-grid">
-        <view class="player-card" wx:for="{{room.players}}" wx:key="id">
-          <view class="player-avatar" style="background:{{item.color}}">
-            <image src="{{item.avatarUrl}}" mode="aspectFill" wx:if="{{item.avatarUrl}}"></image>
-            <text wx:else class="avatar-letter">{{item.nickname[0]}}</text>
-          </view>
-          <text class="player-name">{{item.nickname}}</text>
-          <view class="player-score-box">
-            <text class="player-total num {{item.totalScore > 0 ? 'win' : item.totalScore < 0 ? 'lose' : ''}}">
-              {{item.totalScore > 0 ? '+' : ''}}{{item.totalScore}}
-            </text>
-          </view>
-          <view class="creator-badge" wx:if="{{item.isCreator}}">房主</view>
-        </view>
-
-        <!-- 空位：等待加入 -->
-        <view class="player-card empty-slot" bindtap="onToggleInvite" wx:if="{{room.players.length < 8}}">
-          <view class="empty-avatar">
-            <text class="plus-icon">+</text>
-          </view>
-          <text class="empty-text">等待加入</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 对局记录 -->
-    <view class="rounds-section" wx:if="{{room.rounds.length > 0}}">
-      <text class="section-title">对局记录 ({{room.rounds.length}}局)</text>
-      <scroll-view scroll-x class="rounds-scroll">
-        <view class="rounds-row">
-          <view class="round-col" wx:for="{{room.rounds}}" wx:key="roundNum">
-            <text class="round-num">R{{item.roundNum}}</text>
-            <view class="round-score" wx:for="{{room.players}}" wx:for-item="p" wx:key="id">
-              <text class="rs-val num {{item.scores[p.id] > 0 ? 'win' : item.scores[p.id] < 0 ? 'lose' : ''}}">
-                {{item.scores[p.id] || 0}}
-              </text>
+      <text class="section-title">点击对方头像 = 向TA支付分数</text>
+      <view class="player-list">
+        <view class="player-row" wx:for="{{room.players}}" wx:key="id"
+              bindtap="onTapPlayer" data-id="{{item.id}}" hover-class="row-hover">
+          <view class="pr-left">
+            <view class="pr-avatar" style="background:{{item.color}}">
+              <text>{{item.nickname[0]}}</text>
+            </view>
+            <view class="pr-info">
+              <text class="pr-name">{{item.nickname}}</text>
+              <view class="creator-tag" wx:if="{{item.isCreator}}">主</view>
             </view>
           </view>
+          <text class="pr-score {{item.totalScore > 0 ? 'win' : item.totalScore < 0 ? 'lose' : ''}}">
+            {{item.totalScore > 0 ? '+' : ''}}{{item.totalScore}}
+          </text>
         </view>
-      </scroll-view>
+      </view>
+      <view class="tea-stat" wx:if="{{room.teaFee > 0}}">
+        <text>茶水费 {{room.teaFee}}分/笔 · 已收 {{teaFeeCollected}}分</text>
+      </view>
     </view>
 
-    <!-- 底部留白 -->
-    <view class="bottom-spacer"></view>
+    <!-- 最近交易记录 -->
+    <view class="txn-section" wx:if="{{room.transactions.length > 0}}">
+      <text class="section-title">交易记录 ({{room.transactions.length}}笔)</text>
+      <view class="txn-list">
+        <view class="txn-item" wx:for="{{displayTxns}}" wx:key="index">
+          <view class="txn-left">
+            <text class="txn-from">{{item.fromName}}</text>
+            <text class="txn-arrow">→</text>
+            <text class="txn-to">{{item.toName}}</text>
+          </view>
+          <text class="txn-amount">{{item.amount}}分</text>
+          <text class="txn-time">{{item.timeStr}}</text>
+        </view>
+      </view>
+      <view class="txn-more" wx:if="{{room.transactions.length > 10}}" bindtap="onShowAllTxns">
+        <text>{{showAllTxns ? '收起' : '查看全部 ' + room.transactions.length + ' 笔'}}</text>
+      </view>
+    </view>
+
+    <!-- ========== 底部40%广告区域 ========== -->
+    <view class="ad-zone">
+      <view class="ad-zone-label">— 广告 —</view>
+
+      <!-- Banner广告 -->
+      <view class="ad-banner">
+        <view class="ad-badge">广告</view>
+        <view class="ad-body">
+          <view class="ad-icon-placeholder"></view>
+          <view class="ad-text-area">
+            <text class="ad-title-text">某某品牌推广</text>
+            <text class="ad-desc-text">Banner广告位 · 点击了解详情</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 原生信息流广告 -->
+      <view class="ad-native">
+        <view class="ad-badge">广告</view>
+        <view class="ad-native-body">
+          <view class="ad-native-img"></view>
+          <view class="ad-native-info">
+            <text class="ad-native-title">精选推荐内容</text>
+            <text class="ad-native-desc">原生信息流广告位，上线后展示真实广告</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 激励视频入口 -->
+      <view class="ad-reward">
+        <view class="ad-badge">广告</view>
+        <view class="ad-reward-content">
+          <text class="ad-reward-icon">🎁</text>
+          <text class="ad-reward-text">看视频领取牌运加成</text>
+          <view class="ad-reward-btn">观看</view>
+        </view>
+      </view>
+    </view>
+
   </view>
 
-  <!-- 加载中 -->
   <view class="loading-state" wx:if="{{!room}}">
     <text>加载中...</text>
   </view>
 </scroll-view>
 
-<!-- 底部操作栏（固定） -->
-<view class="bottom-bar" wx:if="{{room}}">
-  <view class="bar-btn" bindtap="onUndo" wx:if="{{room.rounds.length > 0}}" hover-class="btn-hover">
-    <text>↩ 撤销</text>
-  </view>
-  <view class="bar-main-btn" bindtap="onOpenScoreInput" hover-class="btn-hover">
-    <text>✏️ 记一局</text>
-  </view>
-  <view class="bar-btn" bindtap="onEndGame" hover-class="btn-hover">
-    <text>🏁 结算</text>
-  </view>
-</view>
-
-<!-- 记分弹窗 -->
-<view class="score-mask" wx:if="{{showScoreInput}}" bindtap="onCloseScoreInput"></view>
-<view class="score-panel {{showScoreInput ? 'show' : ''}}">
+<!-- ========== 支付弹窗 ========== -->
+<view class="pay-mask" wx:if="{{showPayDialog}}" bindtap="onClosePayDialog"></view>
+<view class="pay-panel {{showPayDialog ? 'show' : ''}}">
   <view class="panel-head">
-    <text class="panel-title">记录第 {{currentRound + 1}} 局</text>
-    <view class="panel-close" bindtap="onCloseScoreInput">✕</view>
+    <text class="panel-title">支付给 {{payTarget.nickname}}</text>
+    <view class="panel-close" bindtap="onClosePayDialog">✕</view>
   </view>
-  <view class="score-rows">
-    <view class="score-row" wx:for="{{room.players}}" wx:key="id" wx:if="{{room}}">
-      <view class="sr-player">
-        <view class="sr-color" style="background:{{item.color}}">
-          <text>{{item.nickname[0]}}</text>
-        </view>
-        <text class="sr-name">{{item.nickname}}</text>
-      </view>
-      <view class="sr-input-area">
-        <view class="sr-quick" bindtap="onQuickScore" data-id="{{item.id}}" data-delta="{{-10}}">-10</view>
-        <input class="sr-input num" type="number" value="{{currentScores[item.id]}}"
-               bindinput="onScoreInput" data-id="{{item.id}}" placeholder="0" />
-        <view class="sr-quick plus" bindtap="onQuickScore" data-id="{{item.id}}" data-delta="{{10}}">+10</view>
-      </view>
+
+  <!-- 快捷金额 -->
+  <view class="quick-amounts">
+    <view class="quick-btn {{payAmount === item ? 'active' : ''}}"
+          wx:for="{{quickAmounts}}" wx:key="*this"
+          bindtap="onQuickAmount" data-val="{{item}}" hover-class="btn-hover">
+      {{item}}
     </view>
   </view>
-  <view class="score-sum">
-    <text>总和: </text>
-    <text class="num {{scoreSum === 0 ? 'balanced' : 'unbalanced'}}">{{scoreSum}}</text>
-    <text class="sum-hint" wx:if="{{scoreSum !== 0}}"> (建议为0)</text>
+
+  <!-- 自定义金额 -->
+  <view class="custom-row">
+    <text class="custom-label">自定义</text>
+    <input class="custom-input" type="number" placeholder="输入分数"
+           value="{{payAmount}}" bindinput="onPayAmountInput" focus="{{showPayDialog}}" />
+    <text class="custom-unit">分</text>
   </view>
-  <button class="btn-primary btn-submit" bindtap="onSubmitScore">✓ 确认记录</button>
+
+  <button class="btn-primary btn-pay" bindtap="onConfirmPay" disabled="{{!payAmount || payAmount <= 0}}">
+    确认支付 {{payAmount || 0}} 分
+  </button>
 </view>
 
-<!-- 手动添加玩家弹窗 -->
-<view class="score-mask" wx:if="{{showAddPlayer}}" bindtap="onCloseAddPlayer"></view>
-<view class="score-panel {{showAddPlayer ? 'show' : ''}}">
+<!-- ========== 添加玩家弹窗 ========== -->
+<view class="pay-mask" wx:if="{{showAddPlayer}}" bindtap="onCloseAddPlayer"></view>
+<view class="pay-panel {{showAddPlayer ? 'show' : ''}}">
   <view class="panel-head">
     <text class="panel-title">添加玩家</text>
     <view class="panel-close" bindtap="onCloseAddPlayer">✕</view>
   </view>
   <view class="add-player-form">
-    <text class="card-label">昵称</text>
-    <input class="input-field" placeholder="输入玩家昵称" value="{{newPlayerName}}" bindinput="onNewPlayerInput" focus="{{showAddPlayer}}" />
+    <input class="input-field" placeholder="输入玩家昵称" value="{{newPlayerName}}"
+           bindinput="onNewPlayerInput" focus="{{showAddPlayer}}" />
   </view>
-  <button class="btn-primary btn-submit" bindtap="onConfirmAddPlayer">✓ 添加</button>
+  <button class="btn-primary btn-pay" bindtap="onConfirmAddPlayer">添加</button>
 </view>

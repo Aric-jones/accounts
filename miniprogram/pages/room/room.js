@@ -6,13 +6,16 @@ Page({
   data: {
     theme: 'light',
     room: null,
-    currentRound: 0,
     codeChars: [],
     showInvite: false,
-    showScoreInput: false,
+    showPayDialog: false,
     showAddPlayer: false,
-    currentScores: {},
-    scoreSum: 0,
+    showAllTxns: false,
+    payTarget: null,
+    payAmount: '',
+    quickAmounts: [1, 2, 5, 10, 20, 50],
+    displayTxns: [],
+    teaFeeCollected: 0,
     newPlayerName: ''
   },
 
@@ -38,29 +41,47 @@ Page({
       return
     }
 
+    room.transactions = room.transactions || []
+
     const gameInfo = GAME_TYPES[room.gameType] || GAME_TYPES.poker
     room.gameTypeName = gameInfo.name
 
-    const netScores = calculateNetScores(room.rounds || [], room.players)
-    let maxScore = -Infinity
-    room.players = room.players.map((p, i) => {
-      const totalScore = netScores[p.id] || 0
-      if (totalScore > maxScore) maxScore = totalScore
-      return { ...p, color: getDefaultAvatar(i), totalScore }
-    })
+    const netScores = calculateNetScores(room.transactions, room.players)
+    room.players = room.players.map((p, i) => ({
+      ...p,
+      color: getDefaultAvatar(i),
+      totalScore: netScores[p.id] || 0
+    }))
 
-    const currentScores = {}
-    room.players.forEach(p => { currentScores[p.id] = '' })
+    let teaFeeCollected = (room.teaFee || 0) * room.transactions.length
+
+    const displayTxns = this.buildDisplayTxns(room.transactions, this.data.showAllTxns)
 
     this.setData({
       room,
-      currentRound: (room.rounds || []).length,
       codeChars: (room.shareCode || '').split(''),
-      currentScores,
-      showInvite: room.players.length < 2
+      showInvite: room.players.length < 2,
+      displayTxns,
+      teaFeeCollected
     })
 
     wx.setNavigationBarTitle({ title: room.name })
+  },
+
+  buildDisplayTxns(transactions, showAll) {
+    const list = showAll ? [...transactions] : transactions.slice(-10)
+    return list.reverse().map(t => {
+      const d = new Date(t.timestamp)
+      const h = String(d.getHours()).padStart(2, '0')
+      const m = String(d.getMinutes()).padStart(2, '0')
+      return { ...t, timeStr: h + ':' + m }
+    })
+  },
+
+  onShowAllTxns() {
+    const show = !this.data.showAllTxns
+    const displayTxns = this.buildDisplayTxns(this.data.room.transactions, show)
+    this.setData({ showAllTxns: show, displayTxns })
   },
 
   // === Invite & Share ===
@@ -72,19 +93,19 @@ Page({
   onCopyCode() {
     wx.setClipboardData({
       data: this.data.room.shareCode,
-      success: () => showToast('房间码已复制')
+      success: () => showToast('已复制')
     })
   },
 
   onShareAppMessage() {
     const { room } = this.data
     return {
-      title: '来加入「' + room.name + '」牌局吧！',
+      title: '来加入「' + room.name + '」牌局！',
       path: '/pages/join/join?code=' + room.shareCode
     }
   },
 
-  // === Add Player (Manual) ===
+  // === Add Player ===
 
   onAddPlayer() {
     this.setData({ showAddPlayer: true, newPlayerName: '' })
@@ -100,94 +121,77 @@ Page({
 
   onConfirmAddPlayer() {
     const name = this.data.newPlayerName.trim()
-    if (!name) {
-      showToast('请输入昵称')
-      return
-    }
+    if (!name) return showToast('请输入昵称')
 
     const { room } = this.data
-    const newPlayer = {
+    room.players.push({
       id: generateId(),
       nickname: name,
       avatarUrl: '',
       isCreator: false
-    }
-
-    room.players.push(newPlayer)
+    })
     this.saveRoom(room)
     this.setData({ showAddPlayer: false })
-
-    // Voice announcement: "[name] joined"
-    this.announceJoin(name)
-
+    wx.vibrateShort({ type: 'heavy' })
     this.loadRoom(room._id)
     showToast(name + ' 已加入')
   },
 
-  announceJoin(name) {
-    // Uses WeChat TTS (requires plugin, see README for setup)
-    // Fallback: system vibration + toast
-    wx.vibrateShort({ type: 'heavy' })
+  // === Direct Payment ===
 
-    // If the "WechatSI" plugin is configured, use it for voice:
-    // const plugin = requirePlugin("WechatSI")
-    // plugin.textToSpeech({ content: name + '加入了牌局', ... })
-  },
-
-  // === Score Input ===
-
-  onOpenScoreInput() {
-    if (this.data.room.players.length < 2) {
-      showToast('至少需要2位玩家')
-      return
-    }
-    const currentScores = {}
-    this.data.room.players.forEach(p => { currentScores[p.id] = '' })
-    this.setData({ showScoreInput: true, currentScores, scoreSum: 0 })
-  },
-
-  onCloseScoreInput() {
-    this.setData({ showScoreInput: false })
-  },
-
-  onScoreInput(e) {
+  onTapPlayer(e) {
     const id = e.currentTarget.dataset.id
-    const val = e.detail.value
-    const scores = { ...this.data.currentScores }
-    scores[id] = val === '' ? '' : parseInt(val) || 0
-    const sum = Object.values(scores).reduce((a, b) => a + (parseInt(b) || 0), 0)
-    this.setData({ currentScores: scores, scoreSum: sum })
-  },
+    const player = this.data.room.players.find(p => p.id === id)
+    if (!player) return
 
-  onQuickScore(e) {
-    const { id, delta } = e.currentTarget.dataset
-    const scores = { ...this.data.currentScores }
-    scores[id] = (parseInt(scores[id]) || 0) + delta
-    const sum = Object.values(scores).reduce((a, b) => a + (parseInt(b) || 0), 0)
-    this.setData({ currentScores: scores, scoreSum: sum })
-  },
-
-  onSubmitScore() {
-    const { currentScores, room } = this.data
-    const scores = {}
-    let hasScore = false
-    room.players.forEach(p => {
-      scores[p.id] = parseInt(currentScores[p.id]) || 0
-      if (scores[p.id] !== 0) hasScore = true
+    this.setData({
+      showPayDialog: true,
+      payTarget: player,
+      payAmount: ''
     })
+  },
 
-    if (!hasScore) {
-      showToast('请至少输入一个分数')
-      return
+  onClosePayDialog() {
+    this.setData({ showPayDialog: false, payTarget: null, payAmount: '' })
+  },
+
+  onQuickAmount(e) {
+    this.setData({ payAmount: e.currentTarget.dataset.val })
+  },
+
+  onPayAmountInput(e) {
+    this.setData({ payAmount: e.detail.value })
+  },
+
+  onConfirmPay() {
+    const { payTarget, payAmount, room } = this.data
+    const amount = parseInt(payAmount)
+    if (!amount || amount <= 0) return showToast('请输入有效分数')
+    if (!payTarget) return
+
+    const userInfo = wx.getStorageSync('userInfo') || {}
+    const myPlayer = room.players.find(p => p.isCreator)
+    const fromName = myPlayer ? myPlayer.nickname : (userInfo.nickName || '我')
+    const fromId = myPlayer ? myPlayer.id : 'me'
+
+    if (fromId === payTarget.id) return showToast('不能支付给自己')
+
+    const txn = {
+      id: generateId(),
+      from: fromId,
+      to: payTarget.id,
+      amount,
+      fromName,
+      toName: payTarget.nickname,
+      timestamp: new Date().toISOString()
     }
 
-    const roundNum = (room.rounds || []).length + 1
-    room.rounds = room.rounds || []
-    room.rounds.push({ roundNum, scores, timestamp: new Date().toISOString() })
+    room.transactions = room.transactions || []
+    room.transactions.push(txn)
     room.updatedAt = new Date().toISOString()
 
     this.saveRoom(room)
-    this.setData({ showScoreInput: false })
+    this.setData({ showPayDialog: false, payTarget: null, payAmount: '' })
     wx.vibrateShort({ type: 'medium' })
     this.loadRoom(room._id)
   },
@@ -197,11 +201,11 @@ Page({
   onUndo() {
     wx.showModal({
       title: '撤销',
-      content: '撤销最后一局记录？',
+      content: '撤销最后一笔记录？',
       success: (res) => {
         if (!res.confirm) return
         const { room } = this.data
-        room.rounds = room.rounds.slice(0, -1)
+        room.transactions = (room.transactions || []).slice(0, -1)
         room.updatedAt = new Date().toISOString()
         this.saveRoom(room)
         this.loadRoom(room._id)
@@ -213,22 +217,20 @@ Page({
   // === End Game ===
 
   onEndGame() {
-    const { room, currentRound } = this.data
-    if (currentRound === 0) {
-      showToast('还没有记录，无需结算')
-      return
+    const { room } = this.data
+    if (!room.transactions || room.transactions.length === 0) {
+      return showToast('还没有交易记录')
     }
     wx.showModal({
       title: '结束牌局',
-      content: '确定结束？已进行' + currentRound + '局。',
+      content: '共' + room.transactions.length + '笔交易，确定结算？',
       confirmText: '结算',
       confirmColor: '#1A6B4A',
       success: (res) => {
         if (!res.confirm) return
-        const netScores = calculateNetScores(room.rounds, room.players)
-        const winner = findWinner(netScores, room.players)
+        const netScores = calculateNetScores(room.transactions, room.players)
         room.status = 'settled'
-        room.winner = winner
+        room.winner = findWinner(netScores, room.players)
         room.updatedAt = new Date().toISOString()
         this.saveRoom(room)
         wx.redirectTo({ url: '/pages/settlement/settlement?id=' + room._id })
@@ -241,11 +243,8 @@ Page({
   saveRoom(room) {
     const localRooms = wx.getStorageSync('localRooms') || []
     const idx = localRooms.findIndex(r => r._id === room._id)
-    if (idx >= 0) {
-      localRooms[idx] = room
-    } else {
-      localRooms.unshift(room)
-    }
+    if (idx >= 0) localRooms[idx] = room
+    else localRooms.unshift(room)
     wx.setStorageSync('localRooms', localRooms)
   }
 })

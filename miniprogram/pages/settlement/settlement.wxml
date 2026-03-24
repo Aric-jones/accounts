@@ -2,7 +2,7 @@
   <!-- 结算头部 -->
   <view class="settle-header">
     <text class="settle-title">🎊 本局结束！</text>
-    <text class="settle-subtitle">{{room.name}} · 共{{totalRounds}}局</text>
+    <text class="settle-subtitle">{{room.name}} · 共{{totalRounds}}笔</text>
   </view>
 
   <!-- 赢家展示 -->

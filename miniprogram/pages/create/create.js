@@ -8,6 +8,7 @@ Page({
     selectedGame: 'guandan',
     gameTypes: [],
     unitPrice: 1,
+    teaFee: 0,
     creating: false
   },
 
@@ -46,8 +47,12 @@ Page({
     this.setData({ unitPrice: parseFloat(e.detail.value) || 0 })
   },
 
+  onTeaFeeInput(e) {
+    this.setData({ teaFee: parseInt(e.detail.value) || 0 })
+  },
+
   onCreateRoom() {
-    const { roomName, selectedGame, unitPrice } = this.data
+    const { roomName, selectedGame, unitPrice, teaFee } = this.data
     if (!roomName.trim()) {
       showToast('请输入牌局名称')
       return
@@ -75,6 +80,7 @@ Page({
       players: [creator],
       rounds: [],
       unitPrice: unitPrice,
+      teaFee: teaFee,
       status: 'playing',
       shareCode: shareCode,
       createdBy: app.globalData.openid || 'local',

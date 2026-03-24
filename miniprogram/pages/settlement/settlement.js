@@ -46,7 +46,8 @@ Page({
         color: getDefaultAvatar(i)
       }))
 
-      const netScores = calculateNetScores(room.rounds || [], players)
+      const scoreData = room.transactions || room.rounds || []
+      const netScores = calculateNetScores(scoreData, players)
       const rankings = generateRankings(netScores, players)
       const winner = findWinner(netScores, players)
       const unitPrice = room.unitPrice || 1
@@ -65,21 +66,23 @@ Page({
       }
 
       const gameInfo = GAME_TYPES[room.gameType] || GAME_TYPES.poker
+      const totalCount = room.transactions ? room.transactions.length : (room.rounds || []).length
 
-      // Pre-compute display values (WXML cannot call JS methods like .toFixed)
       const rankingsDisplay = rankings.map(r => ({
         ...r,
         scorePrefix: r.totalScore > 0 ? '+' : '',
         amountText: (r.totalScore > 0 ? '+' : '') + (Math.round(r.totalScore * unitPrice * 10) / 10)
       }))
 
+      const teaFeeCollected = (room.teaFee || 0) * totalCount
       this.setData({
         room: { ...room, gameTypeName: gameInfo.name },
         winner,
         rankings: rankingsDisplay,
         transfers,
-        totalRounds: (room.rounds || []).length,
-        unitPrice
+        totalRounds: totalCount,
+        unitPrice,
+        teaFeeCollected
       })
 
       this.generateSummary(room, players, netScores, rankings)
@@ -93,6 +96,7 @@ Page({
     const roomData = {
       players,
       rounds: room.rounds || [],
+      transactions: room.transactions || [],
       gameType: room.gameType,
       netScores,
       rankings

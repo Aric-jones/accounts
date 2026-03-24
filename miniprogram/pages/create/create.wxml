@@ -36,6 +36,18 @@
     <text class="hint-text">设为 0 则只记分不记钱</text>
   </view>
 
+  <!-- 茶水费 -->
+  <view class="card">
+    <view class="row-between">
+      <text class="card-label" style="margin-bottom:0">茶水费</text>
+      <view class="amount-wrap">
+        <input class="amount-input" type="number" value="{{teaFee}}" bindinput="onTeaFeeInput" placeholder="0" />
+        <text class="amount-unit">分/人/局</text>
+      </view>
+    </view>
+    <text class="hint-text">每局每人扣除的固定费用，设为 0 则不收</text>
+  </view>
+
   <!-- 开桌按钮 -->
   <view class="btn-area">
     <button class="btn-primary" bindtap="onCreateRoom" loading="{{creating}}">

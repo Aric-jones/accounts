@@ -115,5 +115,34 @@
     </button>
   </view>
 
+  <!-- 模拟广告区域 -->
+  <view class="ad-mock-zone">
+    <view class="ad-mock-banner">
+      <view class="ad-mock-badge">广告</view>
+      <view class="ad-mock-body">
+        <view class="ad-mock-icon"></view>
+        <view class="ad-mock-text">
+          <text class="ad-mock-title">品牌推广</text>
+          <text class="ad-mock-desc">Banner广告位 · AI分析页</text>
+        </view>
+      </view>
+    </view>
+    <view class="ad-mock-native">
+      <view class="ad-mock-badge">广告</view>
+      <view class="ad-mock-native-body">
+        <view class="ad-mock-native-img"></view>
+        <view class="ad-mock-native-info">
+          <text class="ad-mock-title">精选推荐</text>
+          <text class="ad-mock-desc">信息流广告位 · AI分析</text>
+        </view>
+      </view>
+    </view>
+    <view class="ad-mock-reward">
+      <text class="ad-mock-reward-icon">🎬</text>
+      <text class="ad-mock-reward-text">看广告解锁更多AI功能</text>
+      <view class="ad-mock-reward-btn">观看</view>
+    </view>
+  </view>
+
   <view class="bottom-safe"></view>
 </view>

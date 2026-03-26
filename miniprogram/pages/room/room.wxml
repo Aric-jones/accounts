@@ -41,26 +41,25 @@
       </view>
     </view>
 
-    <!-- 玩家列表（点击对方即支付） -->
+    <!-- 玩家列表（横排紧凑） -->
     <view class="players-section">
-      <text class="section-title">点击对方头像 = 向TA支付分数</text>
-      <view class="player-list">
-        <view class="player-row" wx:for="{{room.players}}" wx:key="id"
-              bindtap="onTapPlayer" data-id="{{item.id}}" hover-class="row-hover">
-          <view class="pr-left">
-            <view class="pr-avatar" style="background:{{item.color}}">
-              <text>{{item.nickname[0]}}</text>
+      <text class="section-hint">点击自己=编辑资料 · 点击别人=支付分数</text>
+      <scroll-view scroll-x class="players-scroll">
+        <view class="player-chips">
+          <view class="player-chip {{item.id === myPlayerId ? 'is-me' : ''}}" wx:for="{{room.players}}" wx:key="id"
+                bindtap="onTapPlayer" data-id="{{item.id}}" hover-class="chip-hover">
+            <view class="chip-avatar" style="background:{{item.color}}">
+              <image wx:if="{{item.avatarUrl}}" src="{{item.avatarUrl}}" mode="aspectFill" class="chip-avatar-img" />
+              <text wx:else>{{item.nickname[0]}}</text>
             </view>
-            <view class="pr-info">
-              <text class="pr-name">{{item.nickname}}</text>
-              <view class="creator-tag" wx:if="{{item.isCreator}}">主</view>
-            </view>
+            <text class="chip-name">{{item.nickname}}</text>
+            <text class="chip-score {{item.totalScore > 0 ? 'win' : item.totalScore < 0 ? 'lose' : ''}}">
+              {{item.totalScore > 0 ? '+' : ''}}{{item.totalScore}}
+            </text>
+            <text class="me-badge" wx:if="{{item.id === myPlayerId}}">我</text>
           </view>
-          <text class="pr-score {{item.totalScore > 0 ? 'win' : item.totalScore < 0 ? 'lose' : ''}}">
-            {{item.totalScore > 0 ? '+' : ''}}{{item.totalScore}}
-          </text>
         </view>
-      </view>
+      </scroll-view>
       <view class="tea-stat" wx:if="{{room.teaFee > 0}}">
         <text>茶水费 {{room.teaFee}}分/笔 · 已收 {{teaFeeCollected}}分</text>
       </view>
@@ -139,6 +138,19 @@
     <view class="panel-close" bindtap="onClosePayDialog">✕</view>
   </view>
 
+  <!-- 付款人选择（调试/代操作用） -->
+  <view class="payer-section">
+    <text class="payer-label">谁在付款：</text>
+    <view class="payer-chips">
+      <view class="payer-chip {{payFrom.id === item.id ? 'active' : ''}} {{payTarget.id === item.id ? 'disabled' : ''}}"
+            wx:for="{{room.players}}" wx:key="id"
+            bindtap="onSwitchPayer" data-id="{{item.id}}">
+        <view class="payer-dot" style="background:{{item.color}}"></view>
+        <text>{{item.nickname}}</text>
+      </view>
+    </view>
+  </view>
+
   <!-- 快捷金额 -->
   <view class="quick-amounts">
     <view class="quick-btn {{payAmount === item ? 'active' : ''}}"
@@ -157,8 +169,47 @@
   </view>
 
   <button class="btn-primary btn-pay" bindtap="onConfirmPay" disabled="{{!payAmount || payAmount <= 0}}">
-    确认支付 {{payAmount || 0}} 分
+    {{payFrom.nickname}} 支付 {{payAmount || 0}} 分给 {{payTarget.nickname}}
   </button>
+</view>
+
+<!-- ========== 编辑资料弹窗 ========== -->
+<view class="pay-mask" wx:if="{{showEditProfile}}" bindtap="onCloseEditProfile"></view>
+<view class="pay-panel {{showEditProfile ? 'show' : ''}}">
+  <view class="panel-head">
+    <text class="panel-title">编辑资料</text>
+    <view class="panel-close" bindtap="onCloseEditProfile">✕</view>
+  </view>
+
+  <!-- 头像 -->
+  <view class="edit-avatar-section">
+    <view class="edit-avatar-current" bindtap="onChooseAvatar"
+          style="background:{{editPlayer.avatarColor || editPlayer.color}}">
+      <image wx:if="{{editPlayer.avatarUrl}}" src="{{editPlayer.avatarUrl}}" mode="aspectFill" class="edit-avatar-img" />
+      <text wx:else class="edit-avatar-letter">{{editPlayer.nickname[0]}}</text>
+      <view class="edit-avatar-overlay">换</view>
+    </view>
+    <text class="edit-avatar-hint">点击更换头像</text>
+  </view>
+
+  <!-- 选择颜色 -->
+  <view class="color-picker">
+    <text class="color-label">头像底色</text>
+    <view class="color-options">
+      <view class="color-dot {{(editPlayer.avatarColor || editPlayer.color) === item ? 'active' : ''}}"
+            style="background:{{item}}"
+            wx:for="{{avatarColors}}" wx:key="*this"
+            bindtap="onPickAvatarColor" data-color="{{item}}"></view>
+    </view>
+  </view>
+
+  <!-- 昵称 -->
+  <view class="edit-name-section">
+    <text class="edit-label">昵称</text>
+    <input class="input-field" value="{{editName}}" bindinput="onEditNameInput" maxlength="8" />
+  </view>
+
+  <button class="btn-primary btn-pay" bindtap="onSaveProfile">保存</button>
 </view>
 
 <!-- ========== 添加玩家弹窗 ========== -->

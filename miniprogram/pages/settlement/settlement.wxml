@@ -55,7 +55,8 @@
       <view class="transfer-item" wx:for="{{transfers}}" wx:key="index">
         <view class="transfer-from">
           <view class="transfer-avatar" style="background:{{item.from.color}}">
-            <text>{{item.from.nickname[0]}}</text>
+            <image wx:if="{{item.from.avatarUrl}}" src="{{item.from.avatarUrl}}" mode="aspectFill" class="transfer-avatar-img" />
+            <text wx:else>{{item.from.nickname[0]}}</text>
           </view>
           <text class="transfer-name">{{item.from.nickname}}</text>
         </view>
@@ -66,7 +67,8 @@
         </view>
         <view class="transfer-to">
           <view class="transfer-avatar" style="background:{{item.to.color}}">
-            <text>{{item.to.nickname[0]}}</text>
+            <image wx:if="{{item.to.avatarUrl}}" src="{{item.to.avatarUrl}}" mode="aspectFill" class="transfer-avatar-img" />
+            <text wx:else>{{item.to.nickname[0]}}</text>
           </view>
           <text class="transfer-name">{{item.to.nickname}}</text>
         </view>
@@ -98,8 +100,22 @@
     </view>
   </view>
 
-  <!-- 广告位 -->
-  <view class="ad-area" wx:if="{{showAd}}">
-    <ad unit-id="{{adUnitId}}" ad-type="banner" ad-theme="white"></ad>
+  <!-- 模拟广告区域 -->
+  <view class="ad-mock-zone">
+    <view class="ad-mock-banner">
+      <view class="ad-mock-badge">广告</view>
+      <view class="ad-mock-body">
+        <view class="ad-mock-icon"></view>
+        <view class="ad-mock-text">
+          <text class="ad-mock-title">精选推荐</text>
+          <text class="ad-mock-desc">Banner广告位 · 结算页</text>
+        </view>
+      </view>
+    </view>
+    <view class="ad-mock-reward">
+      <text class="ad-mock-reward-icon">🎬</text>
+      <text class="ad-mock-reward-text">看视频广告再来一局免茶水费</text>
+      <view class="ad-mock-reward-btn">观看</view>
+    </view>
   </view>
 </view>

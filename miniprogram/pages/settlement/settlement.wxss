@@ -238,6 +238,12 @@
   justify-content: center;
 }
 
+.transfer-avatar image, .transfer-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
 .transfer-avatar text {
   font-size: 24rpx;
   color: #FFFFFF;
@@ -314,9 +320,51 @@
   flex: 1;
 }
 
-/* 广告位 */
-.ad-area {
+/* 模拟广告区 */
+.ad-mock-zone {
   margin-top: 32rpx;
-  border-radius: 16rpx;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-bottom: 48rpx;
+}
+.ad-mock-banner {
+  background: #f5f5f5;
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  position: relative;
+  border: 1rpx solid #e8e8e8;
+  display: flex;
+  align-items: center;
+}
+.ad-mock-badge {
+  position: absolute;
+  top: 8rpx; right: 8rpx;
+  font-size: 16rpx; color: #999;
+  background: #eee; padding: 2rpx 8rpx;
+  border-radius: 4rpx;
+}
+.ad-mock-body { display: flex; align-items: center; gap: 16rpx; }
+.ad-mock-icon {
+  width: 64rpx; height: 64rpx;
+  border-radius: 10rpx;
+  background: linear-gradient(135deg, #ddd, #bbb);
+  flex-shrink: 0;
+}
+.ad-mock-text { flex: 1; }
+.ad-mock-title { font-size: 24rpx; color: #333; font-weight: 600; display: block; }
+.ad-mock-desc { font-size: 20rpx; color: #999; display: block; margin-top: 4rpx; }
+.ad-mock-reward {
+  background: linear-gradient(135deg, #FFF7E6, #FFEDD5);
+  border-radius: 12rpx;
+  padding: 20rpx;
+  border: 1rpx solid #F5D0A9;
+  display: flex; align-items: center; gap: 12rpx;
+}
+.ad-mock-reward-icon { font-size: 32rpx; }
+.ad-mock-reward-text { flex: 1; font-size: 24rpx; color: #8B5E3C; font-weight: 600; }
+.ad-mock-reward-btn {
+  padding: 8rpx 24rpx; background: #FF8C00;
+  color: #fff; font-size: 22rpx; font-weight: 600;
+  border-radius: 20rpx;
 }

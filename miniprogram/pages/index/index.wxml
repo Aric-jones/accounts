@@ -77,6 +77,33 @@
     </view>
   </view>
 
-  <!-- 底部留白区域 (40%) -->
-  <view class="bottom-spacer"></view>
+  <!-- 底部广告区域 -->
+  <view class="ad-zone">
+    <view class="ad-zone-label">— 广告 —</view>
+    <view class="ad-mock-banner">
+      <view class="ad-mock-badge">广告</view>
+      <view class="ad-mock-body">
+        <view class="ad-mock-icon"></view>
+        <view class="ad-mock-text">
+          <text class="ad-mock-title">品牌推广</text>
+          <text class="ad-mock-desc">Banner广告位 · 首页</text>
+        </view>
+      </view>
+    </view>
+    <view class="ad-mock-native">
+      <view class="ad-mock-badge">广告</view>
+      <view class="ad-mock-native-body">
+        <view class="ad-mock-native-img"></view>
+        <view class="ad-mock-native-info">
+          <text class="ad-mock-title">精选推荐内容</text>
+          <text class="ad-mock-desc">原生信息流广告位</text>
+        </view>
+      </view>
+    </view>
+    <view class="ad-mock-reward">
+      <text class="ad-mock-reward-icon">🎁</text>
+      <text class="ad-mock-reward-text">看视频领取牌运加成</text>
+      <view class="ad-mock-reward-btn">观看</view>
+    </view>
+  </view>
 </scroll-view>

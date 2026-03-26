@@ -56,8 +56,14 @@ Page({
       transfers.forEach(t => {
         const fromPlayer = players.find(p => p.id === t.from.id)
         const toPlayer = players.find(p => p.id === t.to.id)
-        if (fromPlayer) t.from.color = fromPlayer.color
-        if (toPlayer) t.to.color = toPlayer.color
+        if (fromPlayer) {
+          t.from.color = fromPlayer.avatarColor || fromPlayer.color
+          t.from.avatarUrl = fromPlayer.avatarUrl || ''
+        }
+        if (toPlayer) {
+          t.to.color = toPlayer.avatarColor || toPlayer.color
+          t.to.avatarUrl = toPlayer.avatarUrl || ''
+        }
       })
 
       if (winner) {

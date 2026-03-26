@@ -28,6 +28,11 @@
     <view class="filter-item {{activeFilter === 'paodekuai' ? 'active' : ''}}" bindtap="onFilter" data-type="paodekuai">跑得快</view>
   </view>
 
+  <!-- 清空按钮 -->
+  <view class="clear-bar" wx:if="{{historyList.length > 0}}">
+    <view class="clear-btn" bindtap="onClearAllHistory" hover-class="btn-hover">清空全部</view>
+  </view>
+
   <!-- 历史列表 -->
   <view wx:if="{{historyList.length === 0}}" class="empty-state">
     <text class="empty-icon">📋</text>
@@ -42,13 +47,17 @@
           <text class="history-icon">{{item.gameIcon}}</text>
           <text class="history-name">{{item.name}}</text>
         </view>
-        <text class="history-date">{{item.dateStr}}</text>
+        <view class="history-right">
+          <text class="history-date">{{item.dateStr}}</text>
+          <view class="delete-btn" catchtap="onDeleteHistory" data-id="{{item._id}}" hover-class="btn-hover">删除</view>
+        </view>
       </view>
       <view class="history-body">
         <view class="history-players">
           <view class="h-player" wx:for="{{item.rankings}}" wx:for-item="player" wx:key="id" wx:if="{{index < 4}}">
             <view class="h-avatar" style="background:{{player.color}}">
-              <text>{{player.nickname[0]}}</text>
+              <image wx:if="{{player.avatarUrl}}" src="{{player.avatarUrl}}" mode="aspectFill" class="h-avatar-img" />
+              <text wx:else>{{player.nickname[0]}}</text>
             </view>
             <text class="h-score num {{player.totalScore > 0 ? 'positive' : player.totalScore < 0 ? 'negative' : ''}}">
               {{player.totalScore > 0 ? '+' : ''}}{{player.totalScore}}
@@ -56,9 +65,33 @@
           </view>
         </view>
         <view class="history-meta">
-          <text class="history-rounds">{{item.totalRounds}}局</text>
+          <text class="history-rounds">{{item.totalRounds}}笔</text>
           <text class="history-winner" wx:if="{{item.winner}}">🏆{{item.winner.nickname}}</text>
         </view>
+      </view>
+    </view>
+
+    <!-- 列表中间广告（每3条后插入） -->
+    <view class="ad-mock-inline" wx:if="{{historyList.length >= 3}}">
+      <view class="ad-mock-badge">广告</view>
+      <view class="ad-mock-body">
+        <view class="ad-mock-icon"></view>
+        <view class="ad-mock-text">
+          <text class="ad-mock-title">推荐内容</text>
+          <text class="ad-mock-desc">信息流广告位 · 历史列表</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 底部广告 -->
+  <view class="ad-mock-bottom">
+    <view class="ad-mock-badge">广告</view>
+    <view class="ad-mock-body">
+      <view class="ad-mock-icon"></view>
+      <view class="ad-mock-text">
+        <text class="ad-mock-title">品牌推广</text>
+        <text class="ad-mock-desc">Banner广告位 · 历史页底部</text>
       </view>
     </view>
   </view>

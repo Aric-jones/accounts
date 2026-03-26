@@ -56,6 +56,18 @@
     <text class="btn-hint">开桌后分享房间码邀请牌友加入</text>
   </view>
 
-  <!-- 底部留白 -->
-  <view class="bottom-spacer"></view>
+  <!-- 底部广告区域 -->
+  <view class="ad-zone">
+    <view class="ad-zone-label">— 广告 —</view>
+    <view class="ad-mock-banner">
+      <view class="ad-mock-badge">广告</view>
+      <view class="ad-mock-body">
+        <view class="ad-mock-icon"></view>
+        <view class="ad-mock-text">
+          <text class="ad-mock-title">品牌推广</text>
+          <text class="ad-mock-desc">Banner广告位 · 开桌页</text>
+        </view>
+      </view>
+    </view>
+  </view>
 </scroll-view>

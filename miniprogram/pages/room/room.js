@@ -6,17 +6,23 @@ Page({
   data: {
     theme: 'light',
     room: null,
+    myPlayerId: '',
     codeChars: [],
     showInvite: false,
     showPayDialog: false,
     showAddPlayer: false,
+    showEditProfile: false,
     showAllTxns: false,
     payTarget: null,
+    payFrom: null,
     payAmount: '',
     quickAmounts: [1, 2, 5, 10, 20, 50],
     displayTxns: [],
     teaFeeCollected: 0,
-    newPlayerName: ''
+    newPlayerName: '',
+    editName: '',
+    editPlayer: null,
+    avatarColors: ['#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6', '#1ABC9C', '#E67E22', '#34495E']
   },
 
   onLoad(options) {
@@ -49,16 +55,17 @@ Page({
     const netScores = calculateNetScores(room.transactions, room.players)
     room.players = room.players.map((p, i) => ({
       ...p,
-      color: getDefaultAvatar(i),
+      color: p.avatarColor || getDefaultAvatar(i),
       totalScore: netScores[p.id] || 0
     }))
 
+    const myPlayerId = this.data.myPlayerId || (room.players.find(p => p.isCreator) || {}).id || ''
     let teaFeeCollected = (room.teaFee || 0) * room.transactions.length
-
     const displayTxns = this.buildDisplayTxns(room.transactions, this.data.showAllTxns)
 
     this.setData({
       room,
+      myPlayerId,
       codeChars: (room.shareCode || '').split(''),
       showInvite: room.players.length < 2,
       displayTxns,
@@ -137,22 +144,102 @@ Page({
     showToast(name + ' 已加入')
   },
 
-  // === Direct Payment ===
+  // === Tap Player: self=edit, other=pay ===
 
   onTapPlayer(e) {
     const id = e.currentTarget.dataset.id
-    const player = this.data.room.players.find(p => p.id === id)
+    const { room, myPlayerId } = this.data
+    const player = room.players.find(p => p.id === id)
     if (!player) return
 
-    this.setData({
-      showPayDialog: true,
-      payTarget: player,
-      payAmount: ''
+    if (id === myPlayerId) {
+      this.setData({
+        showEditProfile: true,
+        editPlayer: player,
+        editName: player.nickname
+      })
+    } else {
+      const me = room.players.find(p => p.id === myPlayerId)
+      this.setData({
+        showPayDialog: true,
+        payTarget: player,
+        payFrom: me,
+        payAmount: ''
+      })
+    }
+  },
+
+  // === Edit Profile ===
+
+  onCloseEditProfile() {
+    this.setData({ showEditProfile: false, editPlayer: null })
+  },
+
+  onEditNameInput(e) {
+    this.setData({ editName: e.detail.value })
+  },
+
+  onPickAvatarColor(e) {
+    const color = e.currentTarget.dataset.color
+    const { editPlayer, room } = this.data
+    const p = room.players.find(pl => pl.id === editPlayer.id)
+    if (p) p.avatarColor = color
+    this.saveRoom(room)
+    this.setData({ editPlayer: { ...editPlayer, color, avatarColor: color } })
+    this.loadRoom(room._id)
+  },
+
+  onChooseAvatar() {
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      sizeType: ['compressed'],
+      success: (res) => {
+        const tempPath = res.tempFiles[0].tempFilePath
+        const { editPlayer, room } = this.data
+        const p = room.players.find(pl => pl.id === editPlayer.id)
+        if (p) p.avatarUrl = tempPath
+        this.saveRoom(room)
+        this.loadRoom(room._id)
+        this.setData({ editPlayer: { ...editPlayer, avatarUrl: tempPath } })
+      }
     })
   },
 
+  onSaveProfile() {
+    const { editName, editPlayer, room } = this.data
+    const name = editName.trim()
+    if (!name) return showToast('昵称不能为空')
+
+    const p = room.players.find(pl => pl.id === editPlayer.id)
+    if (p) {
+      const oldName = p.nickname
+      p.nickname = name
+      // update existing transaction names
+      ;(room.transactions || []).forEach(t => {
+        if (t.from === p.id) t.fromName = name
+        if (t.to === p.id) t.toName = name
+      })
+    }
+    this.saveRoom(room)
+    this.setData({ showEditProfile: false, editPlayer: null })
+    this.loadRoom(room._id)
+    showToast('已保存')
+  },
+
+  // === Pay Dialog ===
+
   onClosePayDialog() {
-    this.setData({ showPayDialog: false, payTarget: null, payAmount: '' })
+    this.setData({ showPayDialog: false, payTarget: null, payFrom: null, payAmount: '' })
+  },
+
+  onSwitchPayer(e) {
+    const id = e.currentTarget.dataset.id
+    const player = this.data.room.players.find(p => p.id === id)
+    if (player && player.id !== this.data.payTarget.id) {
+      this.setData({ payFrom: player })
+    }
   },
 
   onQuickAmount(e) {
@@ -164,24 +251,18 @@ Page({
   },
 
   onConfirmPay() {
-    const { payTarget, payAmount, room } = this.data
+    const { payTarget, payFrom, payAmount, room } = this.data
     const amount = parseInt(payAmount)
     if (!amount || amount <= 0) return showToast('请输入有效分数')
-    if (!payTarget) return
-
-    const userInfo = wx.getStorageSync('userInfo') || {}
-    const myPlayer = room.players.find(p => p.isCreator)
-    const fromName = myPlayer ? myPlayer.nickname : (userInfo.nickName || '我')
-    const fromId = myPlayer ? myPlayer.id : 'me'
-
-    if (fromId === payTarget.id) return showToast('不能支付给自己')
+    if (!payTarget || !payFrom) return showToast('请选择付款人')
+    if (payFrom.id === payTarget.id) return showToast('不能支付给自己')
 
     const txn = {
       id: generateId(),
-      from: fromId,
+      from: payFrom.id,
       to: payTarget.id,
       amount,
-      fromName,
+      fromName: payFrom.nickname,
       toName: payTarget.nickname,
       timestamp: new Date().toISOString()
     }
@@ -191,7 +272,7 @@ Page({
     room.updatedAt = new Date().toISOString()
 
     this.saveRoom(room)
-    this.setData({ showPayDialog: false, payTarget: null, payAmount: '' })
+    this.setData({ showPayDialog: false, payTarget: null, payFrom: null, payAmount: '' })
     wx.vibrateShort({ type: 'medium' })
     this.loadRoom(room._id)
   },

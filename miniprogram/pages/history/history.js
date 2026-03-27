@@ -10,7 +10,7 @@ Page({
     activeFilter: 'all',
     stats: {
       totalGames: 0,
-      totalRounds: 0,
+      totalTxns: 0,
       totalScore: 0
     },
     allRooms: []
@@ -37,10 +37,10 @@ Page({
 
     const formatted = settledRooms.map(room => this.formatHistoryRoom(room))
 
-    let totalRounds = 0
+    let totalTxns = 0
     let totalScore = 0
     settledRooms.forEach(room => {
-      totalRounds += room.transactions ? room.transactions.length : (room.rounds || []).length
+      totalTxns += (room.transactions || []).length
     })
 
     this.setData({
@@ -48,7 +48,7 @@ Page({
       historyList: formatted,
       stats: {
         totalGames: settledRooms.length,
-        totalRounds,
+        totalTxns,
         totalScore
       }
     })
@@ -56,12 +56,13 @@ Page({
 
   formatHistoryRoom(room) {
     const gameInfo = GAME_TYPES[room.gameType] || GAME_TYPES.poker
-    const players = (room.players || []).map((p, i) => ({
+    const allPlayers = (room.players || []).map((p, i) => ({
       ...p,
       color: p.avatarColor || getDefaultAvatar(i)
     }))
+    const players = allPlayers.filter(p => p.id !== '__tea__')
     const scoreData = room.transactions || room.rounds || []
-    const netScores = calculateNetScores(scoreData, players)
+    const netScores = calculateNetScores(scoreData, allPlayers)
     const rankings = generateRankings(netScores, players)
     const winner = findWinner(netScores, players)
     const count = room.transactions ? room.transactions.length : (room.rounds || []).length
@@ -70,7 +71,7 @@ Page({
       ...room,
       gameIcon: gameInfo.icon,
       dateStr: formatTime(new Date(room.updatedAt || room.createdAt)),
-      totalRounds: count,
+      txnCount: count,
       rankings,
       winner
     }

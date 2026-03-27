@@ -153,3 +153,9 @@
 .bottom-spacer {
   height: 40vh;
 }
+
+.tea-hint-val {
+  font-size: 24rpx;
+  color: #6BAF8D;
+  font-weight: 600;
+}

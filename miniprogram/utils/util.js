@@ -38,7 +38,7 @@ const GAME_TYPES = {
   guandan: { name: '掼蛋', icon: '🃏', players: [4], defaultPlayers: 4 },
   doudizhu: { name: '斗地主', icon: '🂡', players: [3], defaultPlayers: 3 },
   paodekuai: { name: '跑得快', icon: '🂮', players: [3, 4], defaultPlayers: 4 },
-  poker: { name: '扑克(自定义)', icon: '🎴', players: [2, 3, 4, 5, 6, 7, 8], defaultPlayers: 4 }
+  poker: { name: '扑克', icon: '🎴', players: [2, 3, 4, 5, 6, 7, 8], defaultPlayers: 4 }
 }
 
 const getDefaultAvatar = (index) => {

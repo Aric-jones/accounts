@@ -11,7 +11,7 @@ Page({
     winner: null,
     rankings: [],
     transfers: [],
-    totalRounds: 0,
+    txnCount: 0,
     unitPrice: 1,
     aiSummary: '',
     showAd: false,
@@ -41,13 +41,15 @@ Page({
         return
       }
 
-      const players = room.players.map((p, i) => ({
+      const allPlayers = room.players.map((p, i) => ({
         ...p,
         color: getDefaultAvatar(i)
       }))
+      const players = allPlayers.filter(p => p.id !== '__tea__')
 
       const scoreData = room.transactions || room.rounds || []
-      const netScores = calculateNetScores(scoreData, players)
+      const netScores = calculateNetScores(scoreData, allPlayers)
+      const teaFeeCollected = netScores['__tea__'] || 0
       const rankings = generateRankings(netScores, players)
       const winner = findWinner(netScores, players)
       const unitPrice = room.unitPrice || 1
@@ -80,13 +82,12 @@ Page({
         amountText: (r.totalScore > 0 ? '+' : '') + (Math.round(r.totalScore * unitPrice * 10) / 10)
       }))
 
-      const teaFeeCollected = (room.teaFee || 0) * totalCount
       this.setData({
         room: { ...room, gameTypeName: gameInfo.name },
         winner,
         rankings: rankingsDisplay,
         transfers,
-        totalRounds: totalCount,
+        txnCount: totalCount,
         unitPrice,
         teaFeeCollected
       })
@@ -138,9 +139,9 @@ Page({
   },
 
   onShareAppMessage() {
-    const { room, winner, totalRounds } = this.data
+    const { room, winner, txnCount } = this.data
     return {
-      title: `${room.name}结算：${winner ? winner.nickname + '获胜！' : ''}共${totalRounds}局`,
+      title: `${room.name}结算：${winner ? winner.nickname + '获胜！' : ''}共${txnCount}笔`,
       path: `/pages/settlement/settlement?id=${room._id}`
     }
   }

@@ -71,8 +71,7 @@
 /* 数据概览 */
 .stats-row {
   display: flex;
-  justify-content: space-around;
-  padding: 32rpx;
+  padding: 32rpx 0;
   background: var(--color-card);
   margin-bottom: 24rpx;
   box-shadow: 0 4rpx 16rpx var(--color-shadow);
@@ -82,13 +81,18 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
   gap: 8rpx;
+  flex: 1;
+  min-width: 0;
 }
 
 .stat-num {
   font-size: 40rpx;
   font-weight: 800;
   color: var(--color-text);
+  text-align: center;
+  white-space: nowrap;
 }
 
 .stat-num.positive { color: var(--color-success); }

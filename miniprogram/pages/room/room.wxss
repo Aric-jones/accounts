@@ -76,6 +76,15 @@
   border-radius: 20rpx;
 }
 
+.chart-btn {
+  font-size: 22rpx;
+  color: var(--color-primary);
+  padding: 6rpx 16rpx;
+  background: var(--color-bg);
+  border-radius: 20rpx;
+  border: 1rpx solid var(--color-primary);
+}
+
 .undo-btn {
   font-size: 22rpx;
   color: var(--color-text-secondary);
@@ -173,12 +182,14 @@
 
 .players-scroll {
   white-space: nowrap;
+  height: 180rpx;
 }
 
 .player-chips {
   display: inline-flex;
   gap: 24rpx;
-  padding: 8rpx 4rpx;
+  padding: 10rpx 4rpx 16rpx;
+  align-items: flex-start;
 }
 
 .player-chip {
@@ -190,8 +201,9 @@
 
 .chip-hover { opacity: 0.7; }
 
-.player-chip.is-me .chip-avatar {
-  border: 3rpx solid var(--color-primary);
+.chip-avatar-wrap {
+  position: relative;
+  margin-bottom: 2rpx;
 }
 
 .chip-avatar {
@@ -201,10 +213,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 6rpx;
   box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);
   position: relative;
   overflow: hidden;
+  border: 3rpx solid transparent;
+  box-sizing: content-box;
+}
+
+.player-chip.is-me .chip-avatar {
+  border-color: var(--color-primary);
 }
 
 .chip-avatar-img {
@@ -220,30 +237,38 @@
 }
 
 .me-badge {
-  font-size: 16rpx;
+  position: absolute;
+  top: -4rpx;
+  right: -8rpx;
+  font-size: 14rpx;
   background: var(--color-primary);
   color: #fff;
   padding: 0 8rpx;
   border-radius: 6rpx;
-  margin-top: 2rpx;
+  height: 22rpx;
+  line-height: 22rpx;
+  z-index: 2;
 }
 
 .chip-name {
-  font-size: 22rpx;
+  font-size: 20rpx;
   color: var(--color-text);
   max-width: 120rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: center;
+  height: 28rpx;
+  line-height: 28rpx;
 }
 
 .chip-score {
-  font-size: 26rpx;
+  font-size: 24rpx;
   font-weight: 800;
   font-family: 'DIN Alternate', 'Courier New', monospace;
   color: var(--color-text);
-  margin-top: 2rpx;
+  height: 32rpx;
+  line-height: 32rpx;
 }
 
 .chip-score.win { color: #22C55E; }
@@ -292,12 +317,19 @@
 .txn-arrow { color: var(--color-text-secondary); font-size: 20rpx; }
 .txn-to { color: #22C55E; font-weight: 600; }
 
+.txn-tea-row {
+  background: rgba(107, 175, 141, 0.05);
+}
+
+.txn-tea-from { color: #6BAF8D; font-weight: 600; }
+.txn-tea-to { color: #6BAF8D; font-weight: 600; }
+
 .txn-amount {
   font-weight: 700;
   color: var(--color-text);
-  margin: 0 12rpx;
-  min-width: 80rpx;
+  min-width: 70rpx;
   text-align: right;
+  margin-left: 12rpx;
 }
 
 .txn-time {
@@ -485,6 +517,30 @@
 }
 
 .pay-panel.show { transform: translateY(0); }
+
+/* 居中弹窗 */
+.dialog-center {
+  position: fixed;
+  top: 38%;
+  left: 50%;
+  width: 88%;
+  max-width: 640rpx;
+  background: var(--color-card);
+  border-radius: 24rpx;
+  padding: 24rpx;
+  box-shadow: 0 16rpx 48rpx rgba(0,0,0,0.25);
+  z-index: 100;
+  transform: translate(-50%, -50%) scale(0.8);
+  opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.dialog-center.show {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
 
 .panel-head {
   display: flex;
@@ -740,3 +796,370 @@
   font-size: 28rpx;
   color: var(--color-text);
 }
+
+/* === 茶水费头像 === */
+.tea-chip .tea-avatar {
+  background: linear-gradient(135deg, #A8D8B9, #6BAF8D) !important;
+}
+
+.tea-chip .tea-avatar text {
+  font-size: 34rpx;
+}
+
+.tea-chip .chip-score {
+  color: #6BAF8D;
+}
+
+/* === 茶水费设置面板 === */
+.tea-panel {
+  max-height: 75vh;
+}
+
+.tea-setting-body {
+  padding: 10rpx 0 20rpx;
+}
+
+.tea-percent-display {
+  text-align: center;
+  margin-bottom: 24rpx;
+}
+
+.tea-percent-num {
+  display: block;
+  font-size: 56rpx;
+  font-weight: 900;
+  color: #6BAF8D;
+  font-family: 'DIN Alternate', monospace;
+}
+
+.tea-percent-hint {
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+}
+
+.tea-rule-box {
+  background: rgba(107,175,141,0.06);
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  margin: 12rpx 0;
+}
+
+.tea-rule {
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  display: block;
+}
+
+.tea-percent-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  justify-content: center;
+  margin-bottom: 30rpx;
+}
+
+.tea-pct-btn {
+  width: 90rpx;
+  height: 56rpx;
+  border-radius: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: 600;
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-border);
+  color: var(--color-text);
+}
+
+.tea-pct-btn.active {
+  background: #6BAF8D;
+  color: #fff;
+  border-color: #6BAF8D;
+}
+
+.tea-collect-mode {
+  margin-bottom: 20rpx;
+}
+
+.tea-mode-label {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  display: block;
+  margin-bottom: 10rpx;
+}
+
+.tea-mode-btns {
+  display: flex;
+  gap: 16rpx;
+}
+
+.tea-mode-btn {
+  flex: 1;
+  height: 60rpx;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  background: var(--color-bg);
+  border: 2rpx solid var(--color-border);
+  color: var(--color-text);
+}
+
+.tea-mode-btn.active {
+  background: #6BAF8D;
+  color: #fff;
+  border-color: #6BAF8D;
+}
+
+.tea-mode-desc {
+  font-size: 20rpx;
+  color: var(--color-text-secondary);
+  display: block;
+  margin-top: 8rpx;
+}
+
+.tea-stat-row {
+  display: flex;
+  gap: 20rpx;
+  justify-content: center;
+  margin-bottom: 20rpx;
+}
+
+.tea-stat-item {
+  text-align: center;
+  padding: 12rpx 24rpx;
+  background: rgba(107, 175, 141, 0.08);
+  border-radius: 12rpx;
+  min-width: 140rpx;
+}
+
+.tea-stat-item.pending {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.tea-stat-label {
+  font-size: 20rpx;
+  color: var(--color-text-secondary);
+  display: block;
+}
+
+.tea-stat-val {
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #6BAF8D;
+  font-family: 'DIN Alternate', monospace;
+}
+
+.tea-stat-item.pending .tea-stat-val {
+  color: #F59E0B;
+}
+
+.tea-rule-hint {
+  font-size: 20rpx;
+  color: var(--color-text-secondary);
+  text-align: center;
+  line-height: 1.5;
+  margin-bottom: 16rpx;
+}
+
+.tea-btn-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.tea-btn-row button {
+  flex: 1;
+  margin: 0;
+  font-size: 26rpx;
+  border-radius: 14rpx;
+  padding: 16rpx 0;
+  line-height: 1.4;
+}
+
+.tea-btn-row button::after { border: none; }
+
+.btn-tea-save {
+  background: var(--color-bg) !important;
+  color: var(--color-text) !important;
+  border: 2rpx solid var(--color-border) !important;
+}
+
+.btn-tea-collect {
+  background: #6BAF8D !important;
+  color: #fff !important;
+}
+
+.btn-tea-collect[disabled] {
+  opacity: 0.4;
+}
+
+.tea-pending-badge {
+  position: absolute;
+  top: -4rpx;
+  right: -8rpx;
+  font-size: 14rpx;
+  color: #fff;
+  background: #F59E0B;
+  padding: 0 8rpx;
+  border-radius: 6rpx;
+  height: 22rpx;
+  line-height: 22rpx;
+  z-index: 2;
+}
+
+.edit-link {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+/* === 分数走势图面板 === */
+.chart-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-card);
+  border-radius: 28rpx 28rpx 0 0;
+  padding: 24rpx 24rpx 48rpx;
+  z-index: 1001;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.chart-panel.show {
+  transform: translateY(0);
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  padding: 12rpx 0 16rpx;
+  justify-content: center;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+  border: 2rpx solid var(--color-border);
+  opacity: 0.45;
+  transition: opacity 0.2s, border-color 0.2s;
+}
+
+.legend-item.active {
+  opacity: 1;
+  border-color: var(--color-primary);
+  background: rgba(58,170,119,0.08);
+}
+
+.legend-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+}
+
+.legend-name {
+  font-size: 22rpx;
+  color: var(--color-text);
+}
+
+.legend-val {
+  font-size: 22rpx;
+  font-weight: 700;
+  font-family: 'DIN Alternate', monospace;
+  color: var(--color-text);
+}
+
+.legend-val.win { color: #22C55E; }
+.legend-val.lose { color: #EF4444; }
+
+.chart-canvas-wrap {
+  width: 100%;
+  height: 400rpx;
+  position: relative;
+}
+
+.score-chart-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* 走势图触摸提示 */
+.chart-tooltip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  pointer-events: none;
+}
+
+.tooltip-line {
+  position: absolute;
+  top: 0;
+  bottom: 30rpx;
+  left: 0;
+  width: 1px;
+  background: rgba(0,0,0,0.2);
+  border-left: 1px dashed rgba(0,0,0,0.3);
+}
+
+.tooltip-box {
+  position: absolute;
+  top: 10rpx;
+  left: 10rpx;
+  right: auto;
+  background: rgba(0,0,0,0.8);
+  border-radius: 12rpx;
+  padding: 12rpx 16rpx;
+  min-width: 180rpx;
+  z-index: 10;
+}
+
+.tooltip-box.flip-left {
+  left: auto;
+  right: 10rpx;
+}
+
+.tooltip-title {
+  font-size: 20rpx;
+  color: rgba(255,255,255,0.6);
+  display: block;
+  margin-bottom: 6rpx;
+}
+
+.tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: 4rpx;
+}
+
+.tooltip-dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tooltip-name {
+  font-size: 20rpx;
+  color: #fff;
+  flex: 1;
+}
+
+.tooltip-val {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #fff;
+}
+
+.tooltip-val.win { color: #4ADE80; }
+.tooltip-val.lose { color: #F87171; }

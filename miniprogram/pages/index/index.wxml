@@ -7,8 +7,9 @@
         <text class="welcome-sub">记录每一局的精彩</text>
       </view>
       <view class="avatar-wrap" bindtap="onTapAvatar">
-        <view class="user-avatar-placeholder">
-          <text>👤</text>
+        <image wx:if="{{userInfo.avatarUrl}}" src="{{userInfo.avatarUrl}}" mode="aspectFill" class="user-avatar-img" />
+        <view wx:else class="user-avatar-placeholder">
+          <text>{{userInfo.nickName ? userInfo.nickName[0] : '👤'}}</text>
         </view>
       </view>
     </view>
@@ -43,36 +44,8 @@
         <view class="tag tag-playing">进行中</view>
       </view>
       <view class="room-card-body">
-        <text class="room-meta-text">{{item.players.length}}人 · 第{{item.currentRound}}局</text>
+        <text class="room-meta-text">{{item.players.length}}人 · {{item.txnCount}}笔</text>
         <text class="room-time">{{item.timeAgo}}</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 最近牌局 -->
-  <view class="section">
-    <view class="section-header">
-      <text class="section-title">最近牌局</text>
-      <text class="section-more" bindtap="onViewHistory" wx:if="{{recentRooms.length > 0}}">查看全部</text>
-    </view>
-
-    <view wx:if="{{recentRooms.length === 0}}" class="empty-state">
-      <text class="empty-icon">🃏</text>
-      <text class="empty-text">还没有牌局记录</text>
-      <text class="empty-hint">点击「开一桌」开始第一局</text>
-    </view>
-
-    <view class="room-card" wx:for="{{recentRooms}}" wx:key="_id" bindtap="onEnterRoom" data-room="{{item}}" hover-class="card-hover">
-      <view class="room-card-top">
-        <view class="room-name-row">
-          <text class="room-game-icon">{{item.gameIcon}}</text>
-          <text class="room-name">{{item.name}}</text>
-        </view>
-        <view class="tag tag-settled">已结算</view>
-      </view>
-      <view class="room-card-body">
-        <text class="room-meta-text">{{item.players.length}}人 · {{item.totalRounds}}局</text>
-        <text class="room-winner" wx:if="{{item.winner}}">🏆 {{item.winner.nickname}}</text>
       </view>
     </view>
   </view>

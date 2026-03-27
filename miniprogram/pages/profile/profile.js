@@ -9,7 +9,7 @@ Page({
     userInfo: { nickName: '', avatarUrl: '' },
     stats: {
       totalGames: 0,
-      totalRounds: 0,
+      totalTxns: 0,
       winRate: 0,
       totalScore: 0
     }
@@ -35,15 +35,16 @@ Page({
     const localRooms = wx.getStorageSync('localRooms') || []
     const settledRooms = localRooms.filter(r => r.status === 'settled')
 
-    let totalRounds = 0
+    let totalTxns = 0
     let totalWins = 0
     let totalScore = 0
 
     settledRooms.forEach(room => {
-      totalRounds += (room.rounds || []).length
-      const players = room.players || []
+      totalTxns += (room.transactions || []).length
+      const allPlayers = room.players || []
+      const players = allPlayers.filter(p => p.id !== '__tea__')
       if (players.length > 0) {
-        const netScores = calculateNetScores(room.rounds || [], players)
+        const netScores = calculateNetScores(room.transactions || [], allPlayers)
         const myScore = netScores[players[0].id] || 0
         totalScore += myScore
         if (myScore > 0) totalWins++
@@ -57,7 +58,7 @@ Page({
     this.setData({
       stats: {
         totalGames: settledRooms.length,
-        totalRounds,
+        totalTxns,
         winRate,
         totalScore
       }
@@ -107,7 +108,7 @@ Page({
         if (res.confirm) {
           wx.clearStorageSync()
           this.setData({
-            stats: { totalGames: 0, totalRounds: 0, winRate: 0, totalScore: 0 }
+            stats: { totalGames: 0, totalTxns: 0, winRate: 0, totalScore: 0 }
           })
           showToast('缓存已清除')
         }

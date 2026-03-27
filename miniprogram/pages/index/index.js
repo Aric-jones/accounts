@@ -7,7 +7,6 @@ Page({
     colors: {},
     userInfo: null,
     activeRooms: [],
-    recentRooms: [],
     loading: false
   },
 
@@ -32,26 +31,21 @@ Page({
     const activeRooms = rooms
       .filter(r => r.status === 'playing')
       .map(r => this.formatRoom(r))
-    const recentRooms = rooms
-      .filter(r => r.status === 'settled')
-      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-      .slice(0, 10)
-      .map(r => this.formatRoom(r))
-    this.setData({ activeRooms, recentRooms })
+    this.setData({ activeRooms })
   },
 
   formatRoom(room) {
     const gameInfo = GAME_TYPES[room.gameType] || GAME_TYPES.poker
-    const players = (room.players || []).map((p, i) => ({
+    const players = (room.players || []).filter(p => p.id !== '__tea__').map((p, i) => ({
       ...p,
       color: getDefaultAvatar(i)
     }))
+    const txnCount = (room.transactions || []).length
     return {
       ...room,
       gameIcon: gameInfo.icon,
       players,
-      currentRound: (room.rounds || []).length,
-      totalRounds: (room.rounds || []).length,
+      txnCount,
       timeAgo: formatRelativeTime(new Date(room.updatedAt || room.createdAt)),
       winner: room.winner || null
     }

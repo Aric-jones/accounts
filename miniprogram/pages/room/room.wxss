@@ -182,13 +182,13 @@
 
 .players-scroll {
   white-space: nowrap;
-  height: 180rpx;
+  height: 150rpx;
 }
 
 .player-chips {
   display: inline-flex;
   gap: 24rpx;
-  padding: 10rpx 4rpx 16rpx;
+  padding: 6rpx 4rpx 10rpx;
   align-items: flex-start;
 }
 
@@ -203,7 +203,7 @@
 
 .chip-avatar-wrap {
   position: relative;
-  margin-bottom: 2rpx;
+  margin-bottom: 0;
 }
 
 .chip-avatar {
@@ -261,6 +261,8 @@
   height: 28rpx;
   line-height: 28rpx;
   display: block;
+  margin-top: 6rpx;
+  margin-bottom: 7rpx;
 }
 
 .chip-score {
@@ -273,6 +275,7 @@
   white-space: nowrap;
   text-align: center;
   display: block;
+  margin-top: 2rpx;
 }
 
 .chip-score.win { color: #22C55E; }
@@ -333,6 +336,31 @@
 }
 
 .txn-table-name { color: #D97706; font-weight: 600; }
+
+.txn-my-pay {
+  background: rgba(239, 68, 68, 0.06);
+  border-left: 4rpx solid #EF4444;
+}
+
+.txn-my-receive {
+  background: rgba(34, 197, 94, 0.06);
+  border-left: 4rpx solid #22C55E;
+}
+
+.txn-my-tag {
+  font-size: 18rpx;
+  font-weight: 700;
+  color: #fff;
+  background: #EF4444;
+  border-radius: 6rpx;
+  padding: 2rpx 8rpx;
+  margin-right: 8rpx;
+  flex-shrink: 0;
+}
+
+.txn-my-tag-in {
+  background: #22C55E;
+}
 
 .txn-amount {
   font-weight: 700;

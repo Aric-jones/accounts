@@ -71,7 +71,9 @@
     <view class="txn-section" wx:if="{{room.transactions.length > 0}}">
       <text class="section-title">交易记录 ({{room.transactions.length}}笔)</text>
       <view class="txn-list">
-        <view class="txn-item {{item.to === '__tea__' ? 'txn-tea-row' : item.to === '__table__' || item.from === '__table__' ? 'txn-table-row' : ''}}" wx:for="{{displayTxns}}" wx:key="index">
+        <view class="txn-item {{item.isMyPay ? 'txn-my-pay' : item.isMyReceive ? 'txn-my-receive' : ''}} {{item.to === '__tea__' ? 'txn-tea-row' : item.to === '__table__' || item.from === '__table__' ? 'txn-table-row' : ''}}" wx:for="{{displayTxns}}" wx:key="index">
+          <view class="txn-my-tag" wx:if="{{item.isMyPay}}">出</view>
+          <view class="txn-my-tag txn-my-tag-in" wx:elif="{{item.isMyReceive}}">入</view>
           <view class="txn-left">
             <text class="{{item.to === '__tea__' ? 'txn-tea-from' : item.to === '__table__' || item.from === '__table__' ? 'txn-table-name' : 'txn-from'}}">{{item.fromName}}</text>
             <text class="txn-arrow">→</text>
@@ -138,18 +140,6 @@
   <view class="panel-head">
     <text class="panel-title">支付给 {{payTarget.nickname}}</text>
     <view class="panel-close" bindtap="onClosePayDialog">✕</view>
-  </view>
-
-  <view class="payer-section">
-    <text class="payer-label">谁在付款：</text>
-    <view class="payer-chips">
-      <view class="payer-chip {{payFrom.id === item.id ? 'active' : ''}} {{payTarget.id === item.id ? 'disabled' : ''}}"
-            wx:for="{{realPlayers}}" wx:key="id"
-            bindtap="onSwitchPayer" data-id="{{item.id}}">
-        <view class="payer-dot" style="background:{{item.color}}"></view>
-        <text>{{item.nickname}}</text>
-      </view>
-    </view>
   </view>
 
   <view class="quick-amounts">
@@ -363,18 +353,6 @@
     <view class="table-dir-btn {{tableDirection === 'take' ? 'active' : ''}}" data-dir="take" bindtap="onTableDirection">
       <text>从台面获取</text>
       <text class="table-dir-desc">赢了，加自己分</text>
-    </view>
-  </view>
-
-  <view class="payer-section">
-    <text class="payer-label">选择玩家：</text>
-    <view class="payer-chips">
-      <view class="payer-chip {{tableFrom.id === item.id ? 'active' : ''}}"
-            wx:for="{{realPlayers}}" wx:key="id"
-            bindtap="onTablePlayerSelect" data-id="{{item.id}}">
-        <view class="payer-dot" style="background:{{item.color}}"></view>
-        <text>{{item.nickname}}</text>
-      </view>
     </view>
   </view>
 

@@ -11,7 +11,7 @@
         <text class="code-char num">{{codeChars[index] || ''}}</text>
       </view>
     </view>
-    <input class="hidden-input" focus="{{true}}" value="{{shareCode}}" bindinput="onCodeInput" maxlength="6" type="text" />
+    <input class="cover-input" focus="{{true}}" value="{{shareCode}}" bindinput="onCodeInput" maxlength="6" type="text" />
   </view>
 
   <button class="btn-primary btn-join" bindtap="onJoinRoom" loading="{{joining}}" disabled="{{codeLength < 6}}">

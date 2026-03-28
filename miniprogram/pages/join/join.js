@@ -47,46 +47,39 @@ Page({
     this.setData({ joining: true })
     showLoading('加入中...')
 
-    try {
-      const db = wx.cloud.database()
-      const res = await db.collection('rooms')
-        .where({ shareCode: shareCode, status: 'playing' })
-        .get()
+    // 先查本地
+    const localRooms = wx.getStorageSync('localRooms') || []
+    const localRoom = localRooms.find(r => r.shareCode === shareCode && r.status === 'playing')
+    if (localRoom) {
+      hideLoading()
+      this.setData({ joining: false })
+      wx.redirectTo({ url: '/pages/room/room?id=' + localRoom._id })
+      return
+    }
 
-      if (res.data.length === 0) {
-        // 尝试本地查找
-        const localRooms = wx.getStorageSync('localRooms') || []
-        const localRoom = localRooms.find(r => r.shareCode === shareCode && r.status === 'playing')
-        if (localRoom) {
+    // 再查云端
+    const env = require('../../config/env')
+    if (wx.cloud && env.CLOUD_ENV_ID) {
+      try {
+        const db = wx.cloud.database()
+        const res = await db.collection('rooms')
+          .where({ shareCode: shareCode, status: 'playing' })
+          .get()
+
+        if (res.data.length > 0) {
+          const room = res.data[0]
           hideLoading()
-          const myRoomIds = wx.getStorageSync('myRoomIds') || []
-          if (!myRoomIds.includes(localRoom._id)) {
-            myRoomIds.unshift(localRoom._id)
-            wx.setStorageSync('myRoomIds', myRoomIds)
-          }
-          wx.redirectTo({ url: `/pages/room/room?id=${localRoom._id}` })
+          this.setData({ joining: false })
+          wx.redirectTo({ url: '/pages/room/room?id=' + room._id })
           return
         }
-        hideLoading()
-        showToast('未找到该房间')
-        this.setData({ joining: false })
-        return
+      } catch (e) {
+        console.warn('云查询失败:', e)
       }
-
-      const room = res.data[0]
-      const myRoomIds = wx.getStorageSync('myRoomIds') || []
-      if (!myRoomIds.includes(room._id)) {
-        myRoomIds.unshift(room._id)
-        wx.setStorageSync('myRoomIds', myRoomIds)
-      }
-
-      hideLoading()
-      wx.redirectTo({ url: `/pages/room/room?id=${room._id}` })
-    } catch (e) {
-      hideLoading()
-      console.error('加入房间失败:', e)
-      showToast('加入失败，请重试')
     }
+
+    hideLoading()
+    showToast('未找到该房间')
     this.setData({ joining: false })
   },
 

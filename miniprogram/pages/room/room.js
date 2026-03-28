@@ -193,12 +193,15 @@ Page({
   },
 
   buildDisplayTxns(transactions, showAll) {
+    const myId = this.data.myPlayerId
     const list = showAll ? [...transactions] : transactions.slice(-10)
     return list.reverse().map(t => {
       const d = new Date(t.timestamp)
       const h = String(d.getHours()).padStart(2, '0')
       const m = String(d.getMinutes()).padStart(2, '0')
-      return { ...t, timeStr: h + ':' + m }
+      const isMyPay = t.from === myId
+      const isMyReceive = t.to === myId
+      return { ...t, timeStr: h + ':' + m, isMyPay, isMyReceive }
     })
   },
 
@@ -309,20 +312,27 @@ Page({
     const id = e.currentTarget.dataset.id
     if (id === '__table__') return this.onTapTable()
     if (id === '__tea__') return this.onTapTeaFee()
+
+    const { myPlayerId } = this.data
+    if (id === myPlayerId) {
+      return this.onEditMyProfile()
+    }
     this.onTapPlayer(e)
   },
 
   onTapPlayer(e) {
     const id = e.currentTarget.dataset.id
-    const { realPlayers } = this.data
-    const player = realPlayers.find(p => p.id === id)
-    if (!player) return
+    const { realPlayers, myPlayerId } = this.data
+    const target = realPlayers.find(p => p.id === id)
+    if (!target) return
 
-    const defaultPayer = realPlayers.find(p => p.id !== id) || player
+    const me = realPlayers.find(p => p.id === myPlayerId)
+    if (!me) return showToast('请先设置你是哪位玩家')
+
     this.setData({
       showPayDialog: true,
-      payTarget: player,
-      payFrom: defaultPayer,
+      payTarget: target,
+      payFrom: me,
       payAmount: ''
     })
   },
@@ -583,13 +593,14 @@ Page({
   // === Table (台面) ===
 
   onTapTable() {
-    const { realPlayers } = this.data
-    const defaultFrom = realPlayers[0] || null
+    const { realPlayers, myPlayerId } = this.data
+    const me = realPlayers.find(p => p.id === myPlayerId)
+    if (!me) return showToast('请先设置你是哪位玩家')
     this.setData({
       showTableDialog: true,
       tableDirection: 'pay',
       tableAmount: '',
-      tableFrom: defaultFrom
+      tableFrom: me
     })
   },
 
@@ -977,9 +988,12 @@ Page({
   // === End Game ===
 
   onEndGame() {
-    const { room } = this.data
+    const { room, tableBalance } = this.data
     if (!room.transactions || room.transactions.length === 0) {
       return showToast('还没有交易记录')
+    }
+    if (tableBalance !== 0) {
+      return showToast('台面余额为' + tableBalance + '，请先清零再结算')
     }
     wx.showModal({
       title: '结束牌局',

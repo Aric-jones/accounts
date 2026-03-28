@@ -69,14 +69,16 @@ App({
     if (userInfo) {
       this.globalData.userInfo = userInfo
     }
-    if (wx.cloud) {
-      wx.cloud.callFunction({ name: 'getHistory', data: { action: 'getOpenid' } })
-        .then(res => {
-          if (res.result && res.result.openid) {
-            this.globalData.openid = res.result.openid
-          }
-        })
-        .catch(() => {})
+    if (wx.cloud && env.CLOUD_ENV_ID) {
+      try {
+        wx.cloud.callFunction({ name: 'getHistory', data: { action: 'getOpenid' } })
+          .then(res => {
+            if (res.result && res.result.openid) {
+              this.globalData.openid = res.result.openid
+            }
+          })
+          .catch(() => {})
+      } catch (e) {}
     }
   },
 

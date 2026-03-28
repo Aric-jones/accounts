@@ -42,7 +42,7 @@ Page({
     settledRooms.forEach(room => {
       totalTxns += (room.transactions || []).length
       const allPlayers = room.players || []
-      const players = allPlayers.filter(p => p.id !== '__tea__')
+      const players = allPlayers.filter(p => p.id !== '__tea__' && p.id !== '__table__')
       if (players.length > 0) {
         const netScores = calculateNetScores(room.transactions || [], allPlayers)
         const myScore = netScores[players[0].id] || 0

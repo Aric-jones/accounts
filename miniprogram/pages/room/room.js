@@ -1,6 +1,7 @@
 const { GAME_TYPES, showToast, getDefaultAvatar, generateId } = require('../../utils/util')
 const { calculateNetScores, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
+const voice = require('../../utils/voice')
 
 Page({
   data: {
@@ -16,6 +17,16 @@ Page({
     showEditProfile: false,
     showTeaPanel: false,
     showChart: false,
+    showQrPanel: false,
+    qrCodeUrl: '',
+    qrLoading: false,
+    showTableDialog: false,
+    showTableHelp: false,
+    tableDirection: 'pay',
+    tableAmount: '',
+    tableFrom: null,
+    tablePlayer: null,
+    tableBalance: 0,
     showAllTxns: false,
     payTarget: null,
     payFrom: null,
@@ -33,14 +44,20 @@ Page({
     keyboardHeight: 0,
     chartTooltip: null,
     chartVisibleIds: {},
+    voiceEnabled: true,
     avatarColors: ['#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6', '#1ABC9C', '#E67E22', '#34495E']
   },
 
   onLoad(options) {
     applyTheme(this)
+    voice.init()
+    this.setData({ voiceEnabled: voice.isEnabled() })
     if (options.id) {
       this.roomId = options.id
       this.loadRoom(options.id)
+    }
+    if (options.newRoom === '1') {
+      setTimeout(() => this.setData({ showQrPanel: true }), 300)
     }
   },
 
@@ -54,7 +71,7 @@ Page({
     const localRooms = wx.getStorageSync('localRooms') || []
     const room = localRooms.find(r => r._id === this.roomId)
     if (!room) return
-    const realPlayers = (room.players || []).filter(p => p.id !== '__tea__')
+    const realPlayers = (room.players || []).filter(p => p.id !== '__tea__' && p.id !== '__table__')
     const txns = (room.transactions || []).length
     if (realPlayers.length <= 1 && txns === 0) {
       const filtered = localRooms.filter(r => r._id !== this.roomId)
@@ -78,6 +95,11 @@ Page({
       this.saveRoom(room)
     }
 
+    if (!room.players.find(p => p.id === '__table__')) {
+      room.players.push({ id: '__table__', nickname: '台面', isTable: true })
+      this.saveRoom(room)
+    }
+
     const gameInfo = GAME_TYPES[room.gameType] || GAME_TYPES.poker
     room.gameTypeName = gameInfo.name
 
@@ -86,6 +108,7 @@ Page({
 
     const realPlayers = []
     let teaPlayer = null
+    let tablePlayer = null
     allPlayers.forEach((p, i) => {
       const enriched = {
         ...p,
@@ -93,8 +116,10 @@ Page({
         totalScore: netScores[p.id] || 0
       }
       if (p.id === '__tea__') teaPlayer = enriched
+      else if (p.id === '__table__') tablePlayer = enriched
       else realPlayers.push(enriched)
     })
+    const tableBalance = tablePlayer ? tablePlayer.totalScore : 0
 
     room.players = allPlayers
     const teaFeePercent = room.teaFeePercent || 0
@@ -122,10 +147,38 @@ Page({
     const myPlayerId = this.data.myPlayerId || (realPlayers.find(p => p.isCreator) || {}).id || ''
     const displayTxns = this.buildDisplayTxns(room.transactions, this.data.showAllTxns)
 
+    const allChipPlayers = []
+    if (tablePlayer) {
+      allChipPlayers.push({
+        ...tablePlayer,
+        color: 'linear-gradient(135deg, #F59E0B, #D97706)',
+        avatarText: '🎯',
+        chipLabel: '台面'
+      })
+    }
+    if (teaPlayer) {
+      allChipPlayers.push({
+        ...teaPlayer,
+        color: 'linear-gradient(135deg, #A8D8B9, #6BAF8D)',
+        avatarText: '🍵',
+        chipLabel: teaFeePercent + '%'
+      })
+    }
+    realPlayers.forEach(p => {
+      allChipPlayers.push({
+        ...p,
+        avatarText: p.nickname ? p.nickname[0] : '?',
+        chipLabel: p.nickname
+      })
+    })
+
     this.setData({
       room,
       realPlayers,
+      allChipPlayers,
       teaPlayer,
+      tablePlayer,
+      tableBalance,
       myPlayerId,
       codeChars: (room.shareCode || '').split(''),
       showInvite: false,
@@ -168,6 +221,48 @@ Page({
     })
   },
 
+  onToggleVoice() {
+    const val = !this.data.voiceEnabled
+    voice.setEnabled(val)
+    this.setData({ voiceEnabled: val })
+    showToast(val ? '语音已开启' : '语音已关闭')
+  },
+
+  onShowQrCode() {
+    this.setData({ showQrPanel: true })
+    if (this.data.qrCodeUrl) return
+    const { room } = this.data
+    if (!room) return
+    this.setData({ qrLoading: true })
+    const env = require('../../config/env')
+    if (wx.cloud && env.CLOUD_ENV_ID) {
+      wx.cloud.callFunction({
+        name: 'getWxacode',
+        data: {
+          scene: 'code=' + room.shareCode,
+          page: 'pages/join/join'
+        }
+      }).then(res => {
+        if (res.result && res.result.success && res.result.fileID) {
+          wx.cloud.getTempFileURL({
+            fileList: [res.result.fileID]
+          }).then(tmpRes => {
+            const url = tmpRes.fileList && tmpRes.fileList[0] && tmpRes.fileList[0].tempFileURL
+            this.setData({ qrCodeUrl: url || '', qrLoading: false })
+          }).catch(() => this.setData({ qrLoading: false }))
+        } else {
+          this.setData({ qrLoading: false })
+        }
+      }).catch(() => this.setData({ qrLoading: false }))
+    } else {
+      this.setData({ qrLoading: false })
+    }
+  },
+
+  onCloseQrPanel() {
+    this.setData({ showQrPanel: false })
+  },
+
   onShareAppMessage() {
     const { room } = this.data
     return {
@@ -205,10 +300,17 @@ Page({
     this.setData({ showAddPlayer: false })
     wx.vibrateShort({ type: 'heavy' })
     this.loadRoom(room._id)
-    showToast(name + ' 已加入')
+    voice.onPlayerJoin(name)
   },
 
-  // === Tap Player: open pay dialog (dev: any player can pay any player) ===
+  // === Tap Chip (unified) ===
+
+  onTapChip(e) {
+    const id = e.currentTarget.dataset.id
+    if (id === '__table__') return this.onTapTable()
+    if (id === '__tea__') return this.onTapTeaFee()
+    this.onTapPlayer(e)
+  },
 
   onTapPlayer(e) {
     const id = e.currentTarget.dataset.id
@@ -362,6 +464,17 @@ Page({
     this.setData({ showPayDialog: false, payTarget: null, payFrom: null, payAmount: '' })
     wx.vibrateShort({ type: 'medium' })
     this.loadRoom(room._id)
+
+    if (amount >= 50) {
+      voice.onBigPayment(payFrom.nickname, payTarget.nickname, amount)
+    }
+    const allPlayers = room.players.filter(p => p.id !== '__tea__' && p.id !== '__table__')
+    const netScores = calculateNetScores(room.transactions, room.players)
+    allPlayers.forEach(p => {
+      const s = netScores[p.id] || 0
+      if (s >= 100 && p.id === payTarget.id) voice.onBigWinner(p.nickname, s)
+      if (s <= -100 && p.id === payFrom.id) voice.onBigLoser(p.nickname, s)
+    })
   },
 
   // === Tea Fee Panel ===
@@ -467,6 +580,85 @@ Page({
     showToast('收取' + totalCollected + '分茶水费')
   },
 
+  // === Table (台面) ===
+
+  onTapTable() {
+    const { realPlayers } = this.data
+    const defaultFrom = realPlayers[0] || null
+    this.setData({
+      showTableDialog: true,
+      tableDirection: 'pay',
+      tableAmount: '',
+      tableFrom: defaultFrom
+    })
+  },
+
+  onCloseTableDialog() {
+    this.setData({ showTableDialog: false, tableAmount: '', keyboardHeight: 0 })
+  },
+
+  onTableDirection(e) {
+    this.setData({ tableDirection: e.currentTarget.dataset.dir })
+  },
+
+  onTablePlayerSelect(e) {
+    const id = e.currentTarget.dataset.id
+    const player = this.data.realPlayers.find(p => p.id === id)
+    if (player) this.setData({ tableFrom: player })
+  },
+
+  onTableQuickAmount(e) {
+    this.setData({ tableAmount: e.currentTarget.dataset.val })
+  },
+
+  onTableAmountInput(e) {
+    let val = e.detail.value
+    if (parseInt(val) > 99999) val = '99999'
+    this.setData({ tableAmount: val })
+  },
+
+  onConfirmTable() {
+    const { tableDirection, tableFrom, tableAmount, room, tableBalance } = this.data
+    const amount = Math.min(parseInt(tableAmount) || 0, 99999)
+    if (!amount || amount <= 0) return showToast('请输入有效分数')
+    if (!tableFrom) return showToast('请选择玩家')
+
+    if (tableDirection === 'take' && amount > tableBalance) {
+      return showToast('台面余额不足（当前' + tableBalance + '分）')
+    }
+
+    const now = new Date().toISOString()
+    room.transactions = room.transactions || []
+
+    if (tableDirection === 'pay') {
+      room.transactions.push({
+        id: generateId(),
+        from: tableFrom.id, to: '__table__', amount,
+        fromName: tableFrom.nickname, toName: '台面',
+        timestamp: now
+      })
+    } else {
+      room.transactions.push({
+        id: generateId(),
+        from: '__table__', to: tableFrom.id, amount,
+        fromName: '台面', toName: tableFrom.nickname,
+        timestamp: now
+      })
+    }
+
+    room.updatedAt = now
+    this.saveRoom(room)
+    this.setData({ showTableDialog: false, tableAmount: '' })
+    wx.vibrateShort({ type: 'medium' })
+    this.loadRoom(room._id)
+    const actionText = tableDirection === 'pay' ? '放入台面' : '从台面获取'
+    showToast(tableFrom.nickname + ' ' + actionText + ' ' + amount + '分')
+  },
+
+  onToggleTableHelp() {
+    this.setData({ showTableHelp: !this.data.showTableHelp })
+  },
+
   // === Score Chart ===
 
   onShowChart() {
@@ -518,7 +710,7 @@ Page({
     const { room } = this.data
     if (!room || !room.transactions || room.transactions.length === 0) return
 
-    const players = room.players.filter(p => p.id !== '__tea__')
+    const players = room.players.filter(p => p.id !== '__tea__' && p.id !== '__table__')
     const txns = room.transactions
     const colors = ['#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6', '#1ABC9C', '#E67E22', '#34495E']
 
@@ -756,6 +948,18 @@ Page({
       undoCount = 2
       desc = prev.fromName + '→' + prev.toName + ' ' + prev.amount + '分（含茶水费）'
     }
+
+    const simTxns = txns.slice(0, txns.length - undoCount)
+    const simNet = {}
+    room.players.forEach(p => { simNet[p.id] = 0 })
+    simTxns.forEach(t => {
+      if (simNet[t.from] !== undefined) simNet[t.from] -= t.amount
+      if (simNet[t.to] !== undefined) simNet[t.to] += t.amount
+    })
+    if ((simNet['__table__'] || 0) < 0) {
+      return showToast('撤销后台面余额为负，不允许撤销')
+    }
+
     wx.showModal({
       title: '撤销',
       content: '撤销 ' + desc + '？',

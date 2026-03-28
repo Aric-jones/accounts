@@ -60,7 +60,7 @@ Page({
       ...p,
       color: p.avatarColor || getDefaultAvatar(i)
     }))
-    const players = allPlayers.filter(p => p.id !== '__tea__')
+    const players = allPlayers.filter(p => p.id !== '__tea__' && p.id !== '__table__')
     const scoreData = room.transactions || room.rounds || []
     const netScores = calculateNetScores(scoreData, allPlayers)
     const rankings = generateRankings(netScores, players)

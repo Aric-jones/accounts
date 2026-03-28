@@ -96,6 +96,6 @@ Page({
     this.setData({ creating: false })
 
     // Go directly to room page (which will show QR code and waiting state)
-    wx.redirectTo({ url: '/pages/room/room?id=' + roomData._id })
+    wx.redirectTo({ url: '/pages/room/room?id=' + roomData._id + '&newRoom=1' })
   }
 })

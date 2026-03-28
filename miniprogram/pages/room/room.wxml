@@ -18,10 +18,11 @@
     <!-- 操作栏 -->
     <view class="action-bar">
       <view class="action-left">
-        <view class="invite-toggle" bindtap="onToggleInvite" hover-class="btn-hover">{{showInvite ? '收起邀请' : '邀请玩家'}}</view>
+        <view class="invite-toggle" bindtap="onToggleInvite" hover-class="btn-hover">{{showInvite ? '收起' : '邀请'}}</view>
         <view class="add-player-btn" bindtap="onAddPlayer" hover-class="btn-hover">+ 添加</view>
       </view>
       <view class="action-right">
+        <view class="voice-btn {{voiceEnabled ? 'active' : ''}}" bindtap="onToggleVoice" hover-class="btn-hover">{{voiceEnabled ? '🔊' : '🔇'}}</view>
         <view class="chart-btn" bindtap="onShowChart" wx:if="{{room.transactions.length > 0}}" hover-class="btn-hover">📈走势</view>
         <view class="undo-btn" bindtap="onUndo" wx:if="{{room.transactions.length > 0}}" hover-class="btn-hover">撤销</view>
         <view class="settle-btn" bindtap="onEndGame" hover-class="btn-hover">结算</view>
@@ -34,47 +35,33 @@
         <view class="big-code-box">
           <text class="big-code-char" wx:for="{{codeChars}}" wx:key="index">{{item}}</text>
         </view>
-        <text class="big-code-hint">让牌友输入房间码或扫码加入</text>
+        <text class="big-code-hint">让牌友输入房间码加入</text>
         <view class="invite-btns">
-          <button class="btn-share-wx" open-type="share">转发</button>
-          <button class="btn-copy-code" bindtap="onCopyCode">复制</button>
+          <button class="btn-share-wx" open-type="share">微信转发</button>
+          <button class="btn-copy-code" bindtap="onCopyCode">复制房间码</button>
+          <button class="btn-qr-code" bindtap="onShowQrCode">邀请海报</button>
         </view>
       </view>
     </view>
 
     <!-- 玩家列表（横排紧凑） -->
     <view class="players-section">
-      <text class="section-hint">点击玩家=支付 · 点茶=设置抽水 · <text class="edit-link" bindtap="onEditMyProfile">编辑资料</text></text>
+      <text class="section-hint">点击玩家=支付 · 点茶=设置抽水 · 点台面=公共池 · <text class="edit-link" bindtap="onEditMyProfile">编辑资料</text></text>
       <scroll-view scroll-x class="players-scroll">
         <view class="player-chips">
-          <!-- 茶水费（就是一个玩家） -->
-          <view class="player-chip tea-chip" bindtap="onTapTeaFee" hover-class="chip-hover" wx:if="{{teaPlayer}}">
-            <view class="chip-avatar-wrap">
-              <view class="chip-avatar tea-avatar">
-                <text>🍵</text>
-              </view>
-              <text class="tea-pending-badge" wx:if="{{pendingTeaFee > 0}}">{{pendingTeaFee}}</text>
-            </view>
-            <text class="chip-name">{{teaFeePercent}}%</text>
-            <text class="chip-score {{teaFeeCollected > 0 ? 'win' : ''}}">
-              {{teaFeeCollected > 0 ? '+' : ''}}{{teaFeeCollected}}
-            </text>
-          </view>
-
-          <!-- 真实玩家 -->
-          <view class="player-chip {{item.id === myPlayerId ? 'is-me' : ''}}" wx:for="{{realPlayers}}" wx:key="id"
-                bindtap="onTapPlayer" data-id="{{item.id}}" hover-class="chip-hover">
+          <!-- 所有角色统一渲染 -->
+          <view class="player-chip {{item.id === myPlayerId ? 'is-me' : ''}}" wx:for="{{allChipPlayers}}" wx:key="id"
+                bindtap="onTapChip" data-id="{{item.id}}" hover-class="chip-hover">
             <view class="chip-avatar-wrap">
               <view class="chip-avatar" style="background:{{item.color}}">
                 <image wx:if="{{item.avatarUrl}}" src="{{item.avatarUrl}}" mode="aspectFill" class="chip-avatar-img" />
-                <text wx:else>{{item.nickname[0]}}</text>
+                <text wx:else>{{item.avatarText}}</text>
               </view>
               <text class="me-badge" wx:if="{{item.id === myPlayerId}}">我</text>
+              <text class="tea-pending-badge" wx:if="{{item.id === '__tea__' && pendingTeaFee > 0}}">{{pendingTeaFee}}</text>
             </view>
-            <text class="chip-name">{{item.nickname}}</text>
-            <text class="chip-score {{item.totalScore > 0 ? 'win' : item.totalScore < 0 ? 'lose' : ''}}">
-              {{item.totalScore > 0 ? '+' : ''}}{{item.totalScore}}
-            </text>
+            <text class="chip-name">{{item.chipLabel}}</text>
+            <text class="chip-score {{item.totalScore > 0 ? 'win' : item.totalScore < 0 ? 'lose' : ''}}">{{item.totalScore > 0 ? '+' : ''}}{{item.totalScore}}</text>
           </view>
         </view>
       </scroll-view>
@@ -84,11 +71,11 @@
     <view class="txn-section" wx:if="{{room.transactions.length > 0}}">
       <text class="section-title">交易记录 ({{room.transactions.length}}笔)</text>
       <view class="txn-list">
-        <view class="txn-item {{item.to === '__tea__' ? 'txn-tea-row' : ''}}" wx:for="{{displayTxns}}" wx:key="index">
+        <view class="txn-item {{item.to === '__tea__' ? 'txn-tea-row' : item.to === '__table__' || item.from === '__table__' ? 'txn-table-row' : ''}}" wx:for="{{displayTxns}}" wx:key="index">
           <view class="txn-left">
-            <text class="{{item.to === '__tea__' ? 'txn-tea-from' : 'txn-from'}}">{{item.fromName}}</text>
+            <text class="{{item.to === '__tea__' ? 'txn-tea-from' : item.to === '__table__' || item.from === '__table__' ? 'txn-table-name' : 'txn-from'}}">{{item.fromName}}</text>
             <text class="txn-arrow">→</text>
-            <text class="{{item.to === '__tea__' ? 'txn-tea-to' : 'txn-to'}}">{{item.toName}}</text>
+            <text class="{{item.to === '__tea__' ? 'txn-tea-to' : item.to === '__table__' || item.from === '__table__' ? 'txn-table-name' : 'txn-to'}}">{{item.toName}}</text>
           </view>
           <text class="txn-amount">{{item.amount}}分</text>
           <text class="txn-time">{{item.timeStr}}</text>
@@ -319,4 +306,100 @@
       </view>
     </view>
   </view>
+</view>
+
+<!-- ========== 邀请海报弹窗 ========== -->
+<view class="pay-mask" wx:if="{{showQrPanel}}" bindtap="onCloseQrPanel"></view>
+<view class="dialog-center qr-dialog {{showQrPanel ? 'show' : ''}}">
+  <view class="panel-head">
+    <text class="panel-title">📱 邀请加入</text>
+    <view class="panel-close" bindtap="onCloseQrPanel">✕</view>
+  </view>
+  <view class="qr-poster">
+    <view class="qr-poster-title">{{room.name}}</view>
+    <view class="qr-poster-meta">{{room.gameTypeName}} · ¥{{room.unitPrice}}/分</view>
+    <view wx:if="{{qrLoading}}" class="qr-loading">
+      <text>正在生成小程序码...</text>
+    </view>
+    <image wx:elif="{{qrCodeUrl}}" src="{{qrCodeUrl}}" mode="aspectFit" class="qr-wxacode-img" show-menu-by-longpress="{{true}}" />
+    <view wx:else class="qr-code-display">
+      <text class="qr-code-char" wx:for="{{codeChars}}" wx:key="index">{{item}}</text>
+    </view>
+    <view class="qr-poster-tip" wx:if="{{qrCodeUrl}}">长按识别二维码加入牌局</view>
+    <view class="qr-poster-tip" wx:else>房间码：{{room.shareCode}}</view>
+  </view>
+  <view class="qr-btn-row">
+    <button class="btn-share-wx qr-share-btn" open-type="share">微信转发</button>
+    <button class="btn-copy-code qr-copy-btn" bindtap="onCopyCode">复制房间码</button>
+  </view>
+</view>
+
+<!-- ========== 台面弹窗 ========== -->
+<view class="pay-mask" wx:if="{{showTableDialog}}" bindtap="onCloseTableDialog"></view>
+<view class="dialog-center {{showTableDialog ? 'show' : ''}}">
+  <view class="panel-head">
+    <text class="panel-title">🎯 台面（余额：{{tableBalance}}分）</text>
+    <view class="panel-close" bindtap="onCloseTableDialog">✕</view>
+  </view>
+
+  <view class="table-help-toggle" bindtap="onToggleTableHelp">
+    <text class="table-help-icon">❓</text>
+    <text>{{showTableHelp ? '收起说明' : '台面是什么？'}}</text>
+  </view>
+
+  <view class="table-help-box" wx:if="{{showTableHelp}}">
+    <text class="table-help-text">台面是公共分数池，解决多人牌局中只知道自己输赢、不知道给谁的场景。</text>
+    <text class="table-help-text">输了：把分数「放入台面」，自己扣分，台面增加。</text>
+    <text class="table-help-text">赢了：从台面「获取分数」，台面减少，自己加分。</text>
+    <text class="table-help-text">台面余额不能小于0，确保分数守恒。</text>
+    <text class="table-help-text">撤销：可以撤销台面操作，但撤销后台面余额不能为负。</text>
+  </view>
+
+  <view class="table-dir-bar">
+    <view class="table-dir-btn {{tableDirection === 'pay' ? 'active' : ''}}" data-dir="pay" bindtap="onTableDirection">
+      <text>放入台面</text>
+      <text class="table-dir-desc">输了，扣自己分</text>
+    </view>
+    <view class="table-dir-btn {{tableDirection === 'take' ? 'active' : ''}}" data-dir="take" bindtap="onTableDirection">
+      <text>从台面获取</text>
+      <text class="table-dir-desc">赢了，加自己分</text>
+    </view>
+  </view>
+
+  <view class="payer-section">
+    <text class="payer-label">选择玩家：</text>
+    <view class="payer-chips">
+      <view class="payer-chip {{tableFrom.id === item.id ? 'active' : ''}}"
+            wx:for="{{realPlayers}}" wx:key="id"
+            bindtap="onTablePlayerSelect" data-id="{{item.id}}">
+        <view class="payer-dot" style="background:{{item.color}}"></view>
+        <text>{{item.nickname}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="quick-amounts">
+    <view class="quick-btn {{tableAmount == item ? 'active' : ''}}"
+          wx:for="{{quickAmounts}}" wx:key="*this"
+          bindtap="onTableQuickAmount" data-val="{{item}}" hover-class="btn-hover">
+      {{item}}
+    </view>
+  </view>
+
+  <view class="custom-row">
+    <text class="custom-label">自定义</text>
+    <input class="custom-input" type="number" placeholder="输入分数" maxlength="5"
+           value="{{tableAmount}}" bindinput="onTableAmountInput" focus="{{showTableDialog}}"
+           adjust-position="{{false}}" bindfocus="onKeyboardShow" bindblur="onKeyboardHide" />
+    <text class="custom-unit">分</text>
+  </view>
+
+  <view class="table-balance-hint" wx:if="{{tableDirection === 'take' && tableBalance > 0}}">
+    <text>台面可获取：{{tableBalance}}分</text>
+  </view>
+
+  <button class="btn-primary btn-pay {{tableDirection === 'take' ? 'btn-table-take' : 'btn-table-pay'}}"
+          bindtap="onConfirmTable" disabled="{{!tableAmount || tableAmount <= 0}}">
+    {{tableFrom.nickname}} {{tableDirection === 'pay' ? '放入' : '获取'}} {{tableAmount || 0}} 分
+  </button>
 </view>

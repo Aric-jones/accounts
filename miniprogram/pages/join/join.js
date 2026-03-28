@@ -13,11 +13,17 @@ Page({
 
   onLoad(options) {
     applyTheme(this)
-    if (options.code) {
+    let code = options.code || ''
+    if (!code && options.scene) {
+      const scene = decodeURIComponent(options.scene)
+      const match = scene.match(/code=([^&]+)/)
+      if (match) code = match[1]
+    }
+    if (code) {
       this.setData({
-        shareCode: options.code,
-        codeChars: options.code.split(''),
-        codeLength: options.code.length
+        shareCode: code,
+        codeChars: code.split(''),
+        codeLength: code.length
       })
     }
   },

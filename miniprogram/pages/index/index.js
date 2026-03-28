@@ -36,7 +36,7 @@ Page({
 
   formatRoom(room) {
     const gameInfo = GAME_TYPES[room.gameType] || GAME_TYPES.poker
-    const players = (room.players || []).filter(p => p.id !== '__tea__').map((p, i) => ({
+    const players = (room.players || []).filter(p => p.id !== '__tea__' && p.id !== '__table__').map((p, i) => ({
       ...p,
       color: getDefaultAvatar(i)
     }))

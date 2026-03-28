@@ -68,10 +68,14 @@
   color: var(--color-primary);
 }
 
-.hidden-input {
+.cover-input {
   position: absolute;
-  left: -9999rpx;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   opacity: 0;
+  z-index: 10;
 }
 
 /* 按钮 */

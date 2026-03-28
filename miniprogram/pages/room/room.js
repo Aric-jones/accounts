@@ -312,27 +312,20 @@ Page({
     const id = e.currentTarget.dataset.id
     if (id === '__table__') return this.onTapTable()
     if (id === '__tea__') return this.onTapTeaFee()
-
-    const { myPlayerId } = this.data
-    if (id === myPlayerId) {
-      return this.onEditMyProfile()
-    }
     this.onTapPlayer(e)
   },
 
   onTapPlayer(e) {
     const id = e.currentTarget.dataset.id
-    const { realPlayers, myPlayerId } = this.data
-    const target = realPlayers.find(p => p.id === id)
-    if (!target) return
+    const { realPlayers } = this.data
+    const player = realPlayers.find(p => p.id === id)
+    if (!player) return
 
-    const me = realPlayers.find(p => p.id === myPlayerId)
-    if (!me) return showToast('请先设置你是哪位玩家')
-
+    const defaultPayer = realPlayers.find(p => p.id !== id) || player
     this.setData({
       showPayDialog: true,
-      payTarget: target,
-      payFrom: me,
+      payTarget: player,
+      payFrom: defaultPayer,
       payAmount: ''
     })
   },
@@ -593,14 +586,12 @@ Page({
   // === Table (台面) ===
 
   onTapTable() {
-    const { realPlayers, myPlayerId } = this.data
-    const me = realPlayers.find(p => p.id === myPlayerId)
-    if (!me) return showToast('请先设置你是哪位玩家')
+    const { realPlayers } = this.data
     this.setData({
       showTableDialog: true,
       tableDirection: 'pay',
       tableAmount: '',
-      tableFrom: me
+      tableFrom: realPlayers[0] || null
     })
   },
 

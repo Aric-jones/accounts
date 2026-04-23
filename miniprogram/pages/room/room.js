@@ -67,6 +67,7 @@ Page({
   },
 
   onUnload() {
+    this.stopWatcher()
     if (!this.roomId) return
     const localRooms = wx.getStorageSync('localRooms') || []
     const room = localRooms.find(r => r._id === this.roomId)
@@ -79,25 +80,66 @@ Page({
     }
   },
 
-  loadRoom(roomId) {
-    const localRooms = wx.getStorageSync('localRooms') || []
-    let room = localRooms.find(r => r._id === roomId)
-    if (!room) {
-      showToast('房间不存在')
-      setTimeout(() => wx.navigateBack(), 1000)
-      return
-    }
+  // === Cloud Real-time ===
+  _db() {
+    return wx.cloud.database()
+  },
 
+  startWatcher(roomId) {
+    this.stopWatcher()
+    this.watcher = this._db().collection('rooms').doc(roomId).watch({
+      onChange: (snapshot) => {
+        if (snapshot.doc) {
+          this._updateRoomData(snapshot.doc)
+        }
+      },
+      onError: (err) => {
+        console.error('watch error', err)
+      }
+    })
+  },
+
+  stopWatcher() {
+    if (this.watcher) {
+      this.watcher.close()
+      this.watcher = null
+    }
+  },
+
+  loadRoom(roomId) {
+    const db = this._db()
+    db.collection('rooms').doc(roomId).get().then(res => {
+      if (!res.data) {
+        showToast('房间不存在')
+        setTimeout(() => wx.navigateBack(), 1000)
+        return
+      }
+      const room = res.data
+      // 写入本地缓存
+      const localRooms = wx.getStorageSync('localRooms') || []
+      const idx = localRooms.findIndex(r => r._id === roomId)
+      if (idx >= 0) localRooms[idx] = room
+      else localRooms.unshift(room)
+      wx.setStorageSync('localRooms', localRooms)
+
+      this._updateRoomData(room)
+      this.startWatcher(roomId)
+    }).catch(err => {
+      console.error('加载房间失败', err)
+      showToast('加载房间失败')
+      setTimeout(() => wx.navigateBack(), 1000)
+    })
+  },
+
+  _updateRoomData(room) {
     room.transactions = room.transactions || []
 
     if (!room.players.find(p => p.id === '__tea__')) {
       room.players.push({ id: '__tea__', nickname: '茶水费', isTea: true })
-      this.saveRoom(room)
     }
 
     if (!room.players.find(p => p.id === '__table__')) {
       room.players.push({ id: '__table__', nickname: '台面', isTable: true })
-      this.saveRoom(room)
     }
 
     const gameInfo = GAME_TYPES[room.gameType] || GAME_TYPES.poker
@@ -1006,10 +1048,25 @@ Page({
   // === Persistence ===
 
   saveRoom(room) {
+    // 写本地缓存（支持离线）
     const localRooms = wx.getStorageSync('localRooms') || []
     const idx = localRooms.findIndex(r => r._id === room._id)
     if (idx >= 0) localRooms[idx] = room
     else localRooms.unshift(room)
     wx.setStorageSync('localRooms', localRooms)
+
+    // 写云端（实时同步）
+    this._db().collection('rooms').doc(room._id).update({
+      data: {
+        players: room.players,
+        transactions: room.transactions,
+        teaFeePercent: room.teaFeePercent,
+        teaCollectMode: room.teaCollectMode,
+        lastTeaCollectIdx: room.lastTeaCollectIdx,
+        updatedAt: room.updatedAt
+      }
+    }).catch(err => {
+      console.error('保存房间失败', err)
+    })
   }
 })

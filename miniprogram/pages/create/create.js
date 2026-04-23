@@ -73,6 +73,7 @@ Page({
       name: roomName,
       gameType: selectedGame,
       players: [creator],
+      transactions: [],
       rounds: [],
       unitPrice: unitPrice,
       teaFeePercent: 0,
@@ -84,18 +85,26 @@ Page({
       updatedAt: now.toISOString()
     }
 
-    // Save locally
-    const localRooms = wx.getStorageSync('localRooms') || []
-    localRooms.unshift(roomData)
-    wx.setStorageSync('localRooms', localRooms)
+    const db = wx.cloud.database()
 
-    const myRoomIds = wx.getStorageSync('myRoomIds') || []
-    myRoomIds.unshift(roomData._id)
-    wx.setStorageSync('myRoomIds', myRoomIds)
+    db.collection('rooms').add({
+      data: roomData
+    }).then(res => {
+      // Save locally for offline access
+      const localRooms = wx.getStorageSync('localRooms') || []
+      localRooms.unshift(roomData)
+      wx.setStorageSync('localRooms', localRooms)
 
-    this.setData({ creating: false })
+      const myRoomIds = wx.getStorageSync('myRoomIds') || []
+      myRoomIds.unshift(roomData._id)
+      wx.setStorageSync('myRoomIds', myRoomIds)
 
-    // Go directly to room page (which will show QR code and waiting state)
-    wx.redirectTo({ url: '/pages/room/room?id=' + roomData._id + '&newRoom=1' })
+      this.setData({ creating: false })
+      wx.redirectTo({ url: '/pages/room/room?id=' + roomData._id + '&newRoom=1' })
+    }).catch(err => {
+      console.error('创建房间失败', err)
+      this.setData({ creating: false })
+      showToast('创建房间失败，请检查网络')
+    })
   }
 })

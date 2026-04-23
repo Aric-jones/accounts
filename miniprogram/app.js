@@ -2,11 +2,12 @@ const env = require('./config/env')
 
 App({
   onLaunch() {
-    if (wx.cloud && env.CLOUD_ENV_ID) {
+    if (wx.cloud) {
       try {
-        wx.cloud.init({ env: env.CLOUD_ENV_ID, traceUser: true })
+        const cloudEnv = env.CLOUD_ENV_ID || 'cloudbase-d9g342geg8001469f'
+        wx.cloud.init({ env: cloudEnv, traceUser: true })
       } catch (e) {
-        console.warn('云开发初始化失败，使用本地存储模式', e)
+        console.warn('云开发初始化失败', e)
       }
     }
     this.globalData.env = env

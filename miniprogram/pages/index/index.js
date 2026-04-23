@@ -27,11 +27,16 @@ Page({
   },
 
   loadRooms() {
-    const rooms = wx.getStorageSync('localRooms') || []
-    const activeRooms = rooms
-      .filter(r => r.status === 'playing')
-      .map(r => this.formatRoom(r))
-    this.setData({ activeRooms })
+    this.setData({ loading: true })
+    const db = wx.cloud.database()
+    db.collection('rooms').where({ status: 'playing' }).orderBy('updatedAt', 'desc').get().then(res => {
+      const rooms = res.data || []
+      const activeRooms = rooms.map(r => this.formatRoom(r))
+      this.setData({ activeRooms, loading: false })
+    }).catch(err => {
+      console.error('加载房间列表失败', err)
+      this.setData({ loading: false })
+    })
   },
 
   formatRoom(room) {

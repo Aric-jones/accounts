@@ -30,28 +30,35 @@ Page({
   },
 
   async loadHistory() {
-    const localRooms = wx.getStorageSync('localRooms') || []
-    const settledRooms = localRooms
-      .filter(r => r.status === 'settled')
-      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'getHistory',
+        data: { action: 'history', page: 1, pageSize: 100 }
+      })
+      const rooms = (res.result && res.result.data) || []
+      const settledRooms = rooms
+        .filter(r => r.status === 'settled')
+        .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
 
-    const formatted = settledRooms.map(room => this.formatHistoryRoom(room))
+      const formatted = settledRooms.map(room => this.formatHistoryRoom(room))
 
-    let totalTxns = 0
-    let totalScore = 0
-    settledRooms.forEach(room => {
-      totalTxns += (room.transactions || []).length
-    })
+      let totalTxns = 0
+      settledRooms.forEach(room => {
+        totalTxns += (room.transactions || []).length
+      })
 
-    this.setData({
-      allRooms: formatted,
-      historyList: formatted,
-      stats: {
-        totalGames: settledRooms.length,
-        totalTxns,
-        totalScore
-      }
-    })
+      this.setData({
+        allRooms: formatted,
+        historyList: formatted,
+        stats: {
+          totalGames: settledRooms.length,
+          totalTxns,
+          totalScore: 0
+        }
+      })
+    } catch (err) {
+      console.error('加载历史失败', err)
+    }
   },
 
   formatHistoryRoom(room) {
@@ -103,11 +110,15 @@ Page({
       confirmColor: '#EF4444',
       success: (res) => {
         if (!res.confirm) return
-        const localRooms = wx.getStorageSync('localRooms') || []
-        const updated = localRooms.filter(r => r._id !== roomId)
-        wx.setStorageSync('localRooms', updated)
-        this.loadHistory()
-        wx.showToast({ title: '已删除', icon: 'success' })
+        wx.cloud.callFunction({
+          name: 'getHistory',
+          data: { action: 'delete', roomId }
+        }).then(() => {
+          this.loadHistory()
+          wx.showToast({ title: '已删除', icon: 'success' })
+        }).catch(() => {
+          wx.showToast({ title: '删除失败', icon: 'none' })
+        })
       }
     })
   },

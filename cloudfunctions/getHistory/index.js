@@ -21,17 +21,27 @@ exports.main = async (event, context) => {
     }
   }
 
-  try {
-    const skip = (page - 1) * pageSize
-    const res = await db.collection('rooms')
-      .where({ createdBy: wxContext.OPENID })
-      .orderBy('updatedAt', 'desc')
-      .skip(skip)
-      .limit(pageSize)
-      .get()
+  if (action === 'delete') {
+    try {
+      await db.collection('rooms').doc(event.roomId).remove()
+      return { code: 0 }
+    } catch (e) {
+      return { code: -1, errMsg: e.message }
+    }
+  }
 
-    return { code: 0, data: res.data }
-  } catch (e) {
-    return { code: -1, errMsg: e.message }
+  if (action === 'history') {
+    try {
+      const skip = (page - 1) * pageSize
+      const res = await db.collection('rooms')
+        .where({ createdBy: wxContext.OPENID })
+        .orderBy('updatedAt', 'desc')
+        .skip(skip)
+        .limit(pageSize)
+        .get()
+      return { code: 0, data: res.data }
+    } catch (e) {
+      return { code: -1, errMsg: e.message }
+    }
   }
 }

@@ -47,35 +47,29 @@ Page({
     this.setData({ joining: true })
     showLoading('加入中...')
 
-    // 先查本地
-    const localRooms = wx.getStorageSync('localRooms') || []
-    const localRoom = localRooms.find(r => r.shareCode === shareCode && r.status === 'playing')
-    if (localRoom) {
-      hideLoading()
-      this.setData({ joining: false })
-      wx.redirectTo({ url: '/pages/room/room?id=' + localRoom._id })
-      return
-    }
+    // 直接查云端
+    const db = wx.cloud.database()
+    try {
+      const res = await db.collection('rooms')
+        .where({ shareCode: shareCode, status: 'playing' })
+        .get()
 
-    // 再查云端
-    const env = require('../../config/env')
-    if (wx.cloud && env.CLOUD_ENV_ID) {
-      try {
-        const db = wx.cloud.database()
-        const res = await db.collection('rooms')
-          .where({ shareCode: shareCode, status: 'playing' })
-          .get()
+      if (res.data.length > 0) {
+        const room = res.data[0]
+        // 写入本地缓存，支持离线访问
+        const localRooms = wx.getStorageSync('localRooms') || []
+        const existIdx = localRooms.findIndex(r => r._id === room._id)
+        if (existIdx >= 0) localRooms[existIdx] = room
+        else localRooms.unshift(room)
+        wx.setStorageSync('localRooms', localRooms)
 
-        if (res.data.length > 0) {
-          const room = res.data[0]
-          hideLoading()
-          this.setData({ joining: false })
-          wx.redirectTo({ url: '/pages/room/room?id=' + room._id })
-          return
-        }
-      } catch (e) {
-        console.warn('云查询失败:', e)
+        hideLoading()
+        this.setData({ joining: false })
+        wx.redirectTo({ url: '/pages/room/room?id=' + room._id })
+        return
       }
+    } catch (e) {
+      console.warn('云查询失败:', e)
     }
 
     hideLoading()

@@ -98,7 +98,7 @@ const resolveCloudFileUrls = async (urls) => {
 }
 
 const isRenderableImageUrl = url => {
-  return !!url && !url.startsWith('cloud://')
+  return !!url && (url.startsWith('http://') || url.startsWith('https://'))
 }
 
 module.exports = {

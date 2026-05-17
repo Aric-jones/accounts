@@ -219,6 +219,7 @@ Page({
     }
 
     const myPlayerId = this.resolveMyPlayerId(realPlayers, room._id)
+    this.repairMyLocalAvatar(room, myPlayerId)
     const displayTxns = this.buildDisplayTxns(room.transactions, this.data.showAllTxns)
 
     const allChipPlayers = []
@@ -301,6 +302,26 @@ Page({
       return false
     }
     return true
+  },
+
+  async repairMyLocalAvatar(room, myPlayerId) {
+    if (this._repairingAvatar || !room || !myPlayerId || room.status === 'settled') return
+    const player = (room.players || []).find(p => p.id === myPlayerId)
+    if (!player || !player.avatarUrl) return
+    if (player.avatarUrl.startsWith('cloud://') || player.avatarUrl.startsWith('http://') || player.avatarUrl.startsWith('https://')) return
+
+    this._repairingAvatar = true
+    try {
+      const avatarUrl = await ensureCloudAvatar(player.avatarUrl, player.id || getClientId())
+      if (avatarUrl && avatarUrl !== player.avatarUrl) {
+        player.avatarUrl = avatarUrl
+        await this.saveRoom(room, { updateFields: ['players'] })
+      }
+    } catch (err) {
+      console.warn('repair local avatar failed', err)
+    } finally {
+      this._repairingAvatar = false
+    }
   },
 
   getDisplayAvatarUrl(avatarUrl) {
@@ -593,6 +614,10 @@ Page({
       room = await this.fetchLatestRoom(room._id)
     } catch (err) {
       console.warn('fetch latest room before pay failed', err)
+    }
+    if (room.status === 'settled') {
+      this.redirectIfSettled(room)
+      return
     }
     const latestPayFrom = (room.players || []).find(p => p.id === payFrom.id) || payFrom
     const latestPayTarget = (room.players || []).find(p => p.id === payTarget.id) || payTarget

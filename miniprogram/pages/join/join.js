@@ -1,4 +1,4 @@
-const { generateId, getClientId, showToast, showLoading, hideLoading } = require('../../utils/util')
+const { generateId, getClientId, ensureCloudAvatar, showToast, showLoading, hideLoading } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 
 Page({
@@ -62,11 +62,23 @@ Page({
     try {
       const app = getApp()
       const userInfo = wx.getStorageSync('userInfo') || {}
+      const clientId = getClientId()
+      let avatarUrl = userInfo.avatarUrl || ''
+      try {
+        avatarUrl = await ensureCloudAvatar(avatarUrl, clientId)
+        if (avatarUrl !== userInfo.avatarUrl) {
+          const nextUserInfo = { ...userInfo, avatarUrl }
+          wx.setStorageSync('userInfo', nextUserInfo)
+          app.globalData.userInfo = nextUserInfo
+        }
+      } catch (err) {
+        console.warn('upload avatar failed', err)
+      }
       const player = {
         id: generateId(),
         nickname: userInfo.nickName || '牌友',
-        avatarUrl: userInfo.avatarUrl || '',
-        clientId: getClientId(),
+        avatarUrl,
+        clientId,
         openid: app.globalData.openid || ''
       }
       const res = await wx.cloud.callFunction({

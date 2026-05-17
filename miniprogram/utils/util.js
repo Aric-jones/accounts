@@ -67,12 +67,29 @@ const hideLoading = () => {
   wx.hideLoading()
 }
 
+const isLocalFilePath = path => {
+  return !!path && !path.startsWith('cloud://') && !path.startsWith('http://') && !path.startsWith('https://')
+}
+
+const ensureCloudAvatar = async (avatarUrl, ownerId = 'user') => {
+  if (!isLocalFilePath(avatarUrl)) return avatarUrl || ''
+  if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') return avatarUrl
+
+  const extMatch = avatarUrl.match(/\.(jpg|jpeg|png|webp|gif)(?:\?|$)/i)
+  const ext = extMatch ? extMatch[1].toLowerCase() : 'jpg'
+  const safeOwner = String(ownerId || 'user').replace(/[^a-zA-Z0-9_-]/g, '')
+  const cloudPath = `avatars/${safeOwner || 'user'}-${Date.now()}.${ext}`
+  const res = await wx.cloud.uploadFile({ cloudPath, filePath: avatarUrl })
+  return res.fileID || avatarUrl
+}
+
 module.exports = {
   formatTime,
   formatDate,
   formatRelativeTime,
   generateId,
   getClientId,
+  ensureCloudAvatar,
   GAME_TYPES,
   getDefaultAvatar,
   showToast,

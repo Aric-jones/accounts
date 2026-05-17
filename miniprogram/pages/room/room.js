@@ -1,4 +1,4 @@
-const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId } = require('../../utils/util')
+const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureCloudAvatar } = require('../../utils/util')
 const { calculateNetScores, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
 const voice = require('../../utils/voice')
@@ -238,6 +238,15 @@ Page({
         })
       }
     })
+    allChipPlayers.sort((a, b) => {
+      const rank = p => {
+        if (p.id === '__table__') return 0
+        if (p.id === '__tea__') return 1
+        if (p.id === myPlayerId) return 2
+        return 3
+      }
+      return rank(a) - rank(b)
+    })
 
     this.setData({
       room,
@@ -433,14 +442,20 @@ Page({
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
       sizeType: ['compressed'],
-      success: (res) => {
+      success: async (res) => {
         const tempPath = res.tempFiles[0].tempFilePath
         const { editPlayer, room } = this.data
+        let avatarUrl = tempPath
+        try {
+          avatarUrl = await ensureCloudAvatar(tempPath, editPlayer.id || getClientId())
+        } catch (err) {
+          console.warn('upload avatar failed', err)
+        }
         const p = room.players.find(pl => pl.id === editPlayer.id)
-        if (p) p.avatarUrl = tempPath
-        this.saveRoom(room)
+        if (p) p.avatarUrl = avatarUrl
+        await this.saveRoom(room)
         this.loadRoom(room._id)
-        this.setData({ editPlayer: { ...editPlayer, avatarUrl: tempPath } })
+        this.setData({ editPlayer: { ...editPlayer, avatarUrl } })
       }
     })
   },
@@ -1096,14 +1111,15 @@ Page({
       content: '共' + room.transactions.length + '笔交易，确定结算？',
       confirmText: '结算',
       confirmColor: '#1A6B4A',
-      success: (res) => {
+      success: async (res) => {
         if (!res.confirm) return
         const netScores = calculateNetScores(room.transactions, room.players)
         room.status = 'settled'
         room.winner = findWinner(netScores, room.players)
         room.settledAt = new Date().toISOString()
         room.updatedAt = new Date().toISOString()
-        this.saveRoom(room)
+        this.setData({ room })
+        await this.saveRoom(room)
         wx.redirectTo({ url: '/pages/settlement/settlement?id=' + room._id })
       }
     })

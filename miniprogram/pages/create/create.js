@@ -1,4 +1,4 @@
-const { GAME_TYPES, generateId, getClientId, showToast } = require('../../utils/util')
+const { GAME_TYPES, generateId, getClientId, ensureCloudAvatar, showToast } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 
 Page({
@@ -46,7 +46,7 @@ Page({
     this.setData({ unitPrice: parseFloat(e.detail.value) || 0 })
   },
 
-  onCreateRoom() {
+  async onCreateRoom() {
     const { roomName, selectedGame, unitPrice } = this.data
     if (!roomName.trim()) {
       showToast('请输入牌局名称')
@@ -61,12 +61,24 @@ Page({
     const userInfo = wx.getStorageSync('userInfo') || {}
     const clientId = getClientId()
     const openid = app.globalData.openid || ''
+    let avatarUrl = userInfo.avatarUrl || ''
+
+    try {
+      avatarUrl = await ensureCloudAvatar(avatarUrl, clientId)
+      if (avatarUrl !== userInfo.avatarUrl) {
+        const nextUserInfo = { ...userInfo, avatarUrl }
+        wx.setStorageSync('userInfo', nextUserInfo)
+        app.globalData.userInfo = nextUserInfo
+      }
+    } catch (err) {
+      console.warn('upload avatar failed', err)
+    }
 
     // Only the creator is in the room initially
     const creator = {
       id: generateId(),
       nickname: userInfo.nickName || '房主',
-      avatarUrl: userInfo.avatarUrl || '',
+      avatarUrl,
       clientId,
       openid,
       isCreator: true

@@ -1,4 +1,4 @@
-const { showToast } = require('../../utils/util')
+const { ensureCloudAvatar, showToast, showLoading, hideLoading } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 const { calculateNetScores } = require('../../utils/settlement')
 
@@ -98,13 +98,28 @@ Page({
     })
   },
 
-  onChooseAvatar(e) {
+  async onChooseAvatar(e) {
     const { avatarUrl } = e.detail
     const userInfo = { ...this.data.userInfo, avatarUrl }
     this.setData({ userInfo })
     wx.setStorageSync('userInfo', userInfo)
     getApp().globalData.userInfo = userInfo
-    showToast('头像已更新')
+    try {
+      showLoading('上传头像...')
+      const cloudAvatar = await ensureCloudAvatar(avatarUrl, wx.getStorageSync('clientId') || 'profile')
+      const nextUserInfo = { ...userInfo, avatarUrl: cloudAvatar }
+      this.setData({ userInfo: nextUserInfo })
+      wx.setStorageSync('userInfo', nextUserInfo)
+      getApp().globalData.userInfo = nextUserInfo
+      hideLoading()
+      showToast('头像已更新')
+      return
+    } catch (err) {
+      hideLoading()
+      console.warn('upload avatar failed', err)
+      showToast('头像已更新，云端上传失败')
+      return
+    }
   },
 
   onNicknameBlur(e) {

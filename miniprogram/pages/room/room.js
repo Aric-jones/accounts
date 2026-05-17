@@ -609,24 +609,43 @@ Page({
   },
 
 
-  onShowAvatarDebug() {
+  async onShowAvatarDebug() {
+    const avatarUrls = (this.data.realPlayers || []).map(player => player.avatarUrl).filter(Boolean)
+    await this.resolveAvatarUrlsForDebug(avatarUrls)
     const { realPlayers } = this.data
     const rows = (realPlayers || []).map(player => {
       const globalProfile = this.getPlayerGlobalProfile(player)
+      const finalAvatarUrl = globalProfile.avatarUrl || player.globalAvatarUrl || player.avatarUrl || ''
+      const displayAvatarUrl = this.getDisplayAvatarUrl(finalAvatarUrl)
       return {
         id: player.id,
         nickname: player.nickname,
         openid: player.openid || '',
         roomAvatarUrl: player.roomAvatarUrl || '',
         globalAvatarUrl: globalProfile.avatarUrl || player.globalAvatarUrl || '',
-        finalAvatarUrl: player.avatarUrl || '',
-        displayAvatarUrl: player.displayAvatarUrl || '',
-        hasDisplayAvatar: !!player.hasDisplayAvatar
+        finalAvatarUrl,
+        displayAvatarUrl,
+        hasDisplayAvatar: shouldRenderAvatar(finalAvatarUrl, displayAvatarUrl)
       }
     })
     console.log('[avatar][room] debug-list', rows)
     wx.setClipboardData({ data: JSON.stringify(rows, null, 2) })
     this.setData({ showAvatarDebug: true, avatarDebugRows: rows })
+  },
+
+  async resolveAvatarUrlsForDebug(urls) {
+    const cloudUrls = (urls || [])
+      .filter(url => url && url.startsWith('cloud://') && !(this.avatarUrlMap && this.avatarUrlMap[url]))
+    if (cloudUrls.length === 0) return
+    try {
+      const map = await resolveCloudFileUrls(cloudUrls)
+      this.avatarUrlMap = { ...(this.avatarUrlMap || {}), ...map }
+      console.log('[avatar][room] debug-resolve-map', map)
+      const currentRoom = this.data.room
+      if (currentRoom) this._updateRoomData(currentRoom)
+    } catch (err) {
+      console.log('[avatar][room] debug-resolve-fail', { cloudUrls, err })
+    }
   },
 
   onCloseAvatarDebug() {

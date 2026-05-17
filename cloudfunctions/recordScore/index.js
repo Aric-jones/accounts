@@ -166,6 +166,8 @@ async function ensureCollection(name) {
     const msg = e && (e.errMsg || e.message || '')
     if (msg.includes('already exists') || msg.includes('DATABASE_COLLECTION_ALREADY_EXISTS')) return
     if (msg.includes('collection exists') || msg.includes('table already exists')) return
+    if (msg.includes('ResourceExist') || msg.includes('Table exist')) return
+    if (msg.includes('DATABASE_COLLECTION_ALREADY_EXIST')) return
     if (msg.includes('-502001')) return
     throw e
   }

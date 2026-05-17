@@ -10,6 +10,7 @@ exports.main = async (event, context) => {
   try {
     if (action === 'saveUserProfile') {
       if (!wxContext.OPENID) return { code: -1, errMsg: 'openid missing' }
+      await ensureCollection('userProfiles')
       const now = new Date()
       const data = {
         openid: wxContext.OPENID,
@@ -36,6 +37,7 @@ exports.main = async (event, context) => {
     }
 
     if (action === 'getUserProfiles') {
+      await ensureCollection('userProfiles')
       const list = [...new Set((openids || []).filter(Boolean))]
       if (list.length === 0) return { code: 0, data: [] }
       const res = await db.collection('userProfiles')
@@ -155,4 +157,16 @@ function txnKey(txn) {
   if (!txn) return ''
   if (txn.id) return txn.id
   return [txn.timestamp || '', txn.from || '', txn.to || '', txn.amount || 0].join('|')
+}
+
+async function ensureCollection(name) {
+  try {
+    await db.createCollection(name)
+  } catch (e) {
+    const msg = e && (e.errMsg || e.message || '')
+    if (msg.includes('already exists') || msg.includes('DATABASE_COLLECTION_ALREADY_EXISTS')) return
+    if (msg.includes('collection exists') || msg.includes('table already exists')) return
+    if (msg.includes('-502001')) return
+    throw e
+  }
 }

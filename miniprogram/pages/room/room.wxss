@@ -1232,3 +1232,82 @@
 .btn-table-pay {
   background: var(--color-primary) !important;
 }
+
+
+.avatar-debug-panel {
+  position: fixed;
+  left: 24rpx;
+  right: 24rpx;
+  top: 12vh;
+  max-height: 76vh;
+  background: var(--color-card);
+  border-radius: 20rpx;
+  padding: 24rpx;
+  z-index: 100;
+  transform: scale(0.92);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.avatar-debug-panel.show {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.avatar-debug-list {
+  max-height: 60vh;
+}
+
+.avatar-debug-item {
+  display: flex;
+  gap: 18rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid var(--color-border);
+}
+
+.avatar-debug-item:last-child {
+  border-bottom: none;
+}
+
+.avatar-debug-preview {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  font-size: 34rpx;
+  font-weight: 700;
+}
+
+.avatar-debug-img {
+  width: 100%;
+  height: 100%;
+}
+
+.avatar-debug-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.avatar-debug-name {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 8rpx;
+}
+
+.avatar-debug-line {
+  display: block;
+  font-size: 20rpx;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  word-break: break-all;
+}

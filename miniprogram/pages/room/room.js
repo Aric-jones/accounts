@@ -16,6 +16,8 @@ Page({
     showEditProfile: false,
     showTeaPanel: false,
     showChart: false,
+    showAvatarDebug: false,
+    avatarDebugRows: [],
     showQrPanel: false,
     qrCodeUrl: '',
     qrLoading: false,
@@ -623,19 +625,12 @@ Page({
       }
     })
     console.log('[avatar][room] debug-list', rows)
-    const text = rows.map(item => [
-      item.nickname + ' / ' + item.id,
-      'room=' + (item.roomAvatarUrl || 'empty'),
-      'global=' + (item.globalAvatarUrl || 'empty'),
-      'display=' + (item.displayAvatarUrl || 'empty'),
-      'show=' + item.hasDisplayAvatar
-    ].join('\n')).join('\n\n')
     wx.setClipboardData({ data: JSON.stringify(rows, null, 2) })
-    wx.showModal({
-      title: 'Avatar Debug',
-      content: (text || 'No players').slice(0, 900),
-      showCancel: false
-    })
+    this.setData({ showAvatarDebug: true, avatarDebugRows: rows })
+  },
+
+  onCloseAvatarDebug() {
+    this.setData({ showAvatarDebug: false })
   },
 
   onShowQrCode() {

@@ -53,6 +53,7 @@ L2：涉及共享头像工具、房间参与者识别、首页跨页面展示范
 - 本次新增全局用户头像资料能力后，需要重新上传并部署 `cloudfunctions/recordScore`。
 - `recordScore` 新增 `saveUserProfile`：按当前调用者 `OPENID` 保存全局 `nickName/avatarUrl/clientId`。
 - `recordScore` 新增 `getUserProfiles`：按房间玩家 `openid` 批量读取全局用户资料，供房间页展示优先使用。
+- `recordScore` 在访问 `userProfiles` 前会尝试自动创建集合；如果权限限制导致自动创建失败，需要在云开发控制台数据库中手动新建 `userProfiles` 集合。
 - 首页筛选依赖既有 `getHistory` 云函数的 `action: 'getOpenid'` 能力；若线上环境此前没有部署包含该能力的 `getHistory`，需要先部署 `cloudfunctions/getHistory`。
 - 创建、加入、记账、头像回写仍依赖 `joinRoom`、`recordScore` 与微信云存储能力。
 
@@ -68,7 +69,7 @@ L2：涉及共享头像工具、房间参与者识别、首页跨页面展示范
 - 已加入房间后，用户在个人资料页或其他入口更换头像，不会天然更新既有 `room.players` 快照；进入房间时必须把当前用户本地 `userInfo.nickName/avatarUrl` 同步到该房间的当前玩家资料。
 - 房间页 `_updateRoomData` 需输出每个真实玩家的 `avatarUrl/displayAvatarUrl/hasDisplayAvatar`，用于判断对方头像是“未写入房间”“未解析临时 URL”还是“已解析但渲染失败”。
 - 展示头像时应优先使用全局 `userProfiles[openid].avatarUrl`，其次使用房间 `players[].avatarUrl` 快照；更换头像的语义是修改“我的用户头像”，不是只修改某一局游戏里的玩家头像。
-- 房间页新增头像测试入口，用于列出本局所有玩家的房间头像、全局头像、实际展示头像、临时 URL 与渲染判断。
+- 房间页新增头像测试入口，用于预览本局所有玩家头像，并列出房间头像、全局头像、实际展示头像、临时 URL 与渲染判断。
 
 ## 验证记录
 

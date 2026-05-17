@@ -9,7 +9,7 @@
   <view class="winner-showcase" wx:if="{{winner}}">
     <view class="winner-crown">👑</view>
     <view class="winner-avatar" style="background:{{winner.color}}">
-      <image src="{{winner.avatarUrl}}" mode="aspectFill" wx:if="{{winner.avatarUrl}}"></image>
+      <image src="{{winner.displayAvatarUrl}}" mode="aspectFill" wx:if="{{winner.hasDisplayAvatar}}"></image>
       <text wx:else class="avatar-text">{{winner.nickname[0]}}</text>
     </view>
     <text class="winner-name">{{winner.nickname}}</text>
@@ -30,7 +30,7 @@
         </view>
         <view class="rank-player">
           <view class="rank-avatar" style="background:{{item.color}}">
-            <image src="{{item.avatarUrl}}" mode="aspectFill" wx:if="{{item.avatarUrl}}"></image>
+            <image src="{{item.displayAvatarUrl}}" mode="aspectFill" wx:if="{{item.hasDisplayAvatar}}"></image>
             <text wx:else>{{item.nickname[0]}}</text>
           </view>
           <text class="rank-name">{{item.nickname}}</text>
@@ -55,7 +55,7 @@
       <view class="transfer-item" wx:for="{{transfers}}" wx:key="index">
         <view class="transfer-from">
           <view class="transfer-avatar" style="background:{{item.from.color}}">
-            <image wx:if="{{item.from.avatarUrl}}" src="{{item.from.avatarUrl}}" mode="aspectFill" class="transfer-avatar-img" />
+            <image wx:if="{{item.from.hasDisplayAvatar}}" src="{{item.from.displayAvatarUrl}}" mode="aspectFill" class="transfer-avatar-img" />
             <text wx:else>{{item.from.nickname[0]}}</text>
           </view>
           <text class="transfer-name">{{item.from.nickname}}</text>
@@ -67,7 +67,7 @@
         </view>
         <view class="transfer-to">
           <view class="transfer-avatar" style="background:{{item.to.color}}">
-            <image wx:if="{{item.to.avatarUrl}}" src="{{item.to.avatarUrl}}" mode="aspectFill" class="transfer-avatar-img" />
+            <image wx:if="{{item.to.hasDisplayAvatar}}" src="{{item.to.displayAvatarUrl}}" mode="aspectFill" class="transfer-avatar-img" />
             <text wx:else>{{item.to.nickname[0]}}</text>
           </view>
           <text class="transfer-name">{{item.to.nickname}}</text>

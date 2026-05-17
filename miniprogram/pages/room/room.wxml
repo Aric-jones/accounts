@@ -53,7 +53,7 @@
                 bindtap="onTapChip" data-id="{{item.id}}" hover-class="chip-hover">
             <view class="chip-avatar-wrap">
               <view class="chip-avatar" style="background:{{item.color}}">
-                <image wx:if="{{item.displayAvatarUrl || item.avatarUrl}}" src="{{item.displayAvatarUrl || item.avatarUrl}}" mode="aspectFill" class="chip-avatar-img" />
+                <image wx:if="{{item.hasDisplayAvatar}}" src="{{item.displayAvatarUrl}}" mode="aspectFill" class="chip-avatar-img" />
                 <text wx:else>{{item.avatarText}}</text>
               </view>
               <text class="me-badge" wx:if="{{item.id === myPlayerId}}">我</text>
@@ -142,7 +142,7 @@
   <view class="edit-avatar-section">
     <view class="edit-avatar-current" bindtap="onChooseAvatar"
           style="background:{{editPlayer.avatarColor || editPlayer.color}}">
-      <image wx:if="{{editPlayer.displayAvatarUrl || editPlayer.avatarUrl}}" src="{{editPlayer.displayAvatarUrl || editPlayer.avatarUrl}}" mode="aspectFill" class="edit-avatar-img" />
+      <image wx:if="{{editPlayer.hasDisplayAvatar}}" src="{{editPlayer.displayAvatarUrl}}" mode="aspectFill" class="edit-avatar-img" />
       <text wx:else class="edit-avatar-letter">{{editPlayer.nickname[0]}}</text>
       <view class="edit-avatar-overlay">换</view>
     </view>

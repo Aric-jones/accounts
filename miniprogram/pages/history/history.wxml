@@ -54,7 +54,7 @@
         <view class="history-players">
           <view class="h-player" wx:for="{{item.rankings}}" wx:for-item="player" wx:key="id" wx:if="{{index < 4}}">
             <view class="h-avatar" style="background:{{player.color}}">
-              <image wx:if="{{player.avatarUrl}}" src="{{player.avatarUrl}}" mode="aspectFill" class="h-avatar-img" />
+              <image wx:if="{{player.hasDisplayAvatar}}" src="{{player.displayAvatarUrl}}" mode="aspectFill" class="h-avatar-img" />
               <text wx:else>{{player.nickname[0]}}</text>
             </view>
             <text class="h-score num {{player.totalScore > 0 ? 'positive' : player.totalScore < 0 ? 'negative' : ''}}">{{player.totalScore > 0 ? '+' : ''}}{{player.totalScore}}</text>

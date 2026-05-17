@@ -23,7 +23,29 @@ exports.main = async (event, context) => {
 
   if (action === 'delete') {
     try {
-      await db.collection('rooms').doc(event.roomId).remove()
+      await db.collection('userHiddenRooms').add({
+        data: {
+          roomId: event.roomId,
+          openid: wxContext.OPENID,
+          hiddenAt: new Date()
+        }
+      })
+      return { code: 0 }
+    } catch (e) {
+      return { code: -1, errMsg: e.message }
+    }
+  }
+
+  if (action === 'clear') {
+    try {
+      const roomIds = event.roomIds || []
+      await Promise.all(roomIds.map(roomId => db.collection('userHiddenRooms').add({
+        data: {
+          roomId,
+          openid: wxContext.OPENID,
+          hiddenAt: new Date()
+        }
+      })))
       return { code: 0 }
     } catch (e) {
       return { code: -1, errMsg: e.message }
@@ -34,6 +56,10 @@ exports.main = async (event, context) => {
     try {
       const skip = (page - 1) * pageSize
       const _ = db.command
+      const hiddenRes = await db.collection('userHiddenRooms')
+        .where({ openid: wxContext.OPENID })
+        .get()
+      const hiddenRoomIds = new Set((hiddenRes.data || []).map(item => item.roomId))
       const res = await db.collection('rooms')
         .where(_.or([
           { createdBy: wxContext.OPENID },
@@ -43,7 +69,7 @@ exports.main = async (event, context) => {
         .skip(skip)
         .limit(pageSize)
         .get()
-      return { code: 0, data: res.data }
+      return { code: 0, data: (res.data || []).filter(room => !hiddenRoomIds.has(room._id)) }
     } catch (e) {
       return { code: -1, errMsg: e.message }
     }

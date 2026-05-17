@@ -1,4 +1,4 @@
-const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureCloudAvatar, resolveCloudFileUrls } = require('../../utils/util')
+const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureCloudAvatar, resolveCloudFileUrls, isRenderableImageUrl } = require('../../utils/util')
 const { calculateNetScores, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
 const voice = require('../../utils/voice')
@@ -162,6 +162,7 @@ Page({
     room.transactions = room.transactions || []
 
     this.resolveRoomAvatarUrls(room)
+    this.redirectIfSettled(room)
 
     if (!room.players.find(p => p.id === '__tea__')) {
       room.players.push({ id: '__tea__', nickname: '茶水费', isTea: true })
@@ -184,6 +185,7 @@ Page({
       const enriched = {
         ...p,
         displayAvatarUrl: this.getDisplayAvatarUrl(p.avatarUrl),
+        hasDisplayAvatar: isRenderableImageUrl(this.getDisplayAvatarUrl(p.avatarUrl)),
         color: p.avatarColor || getDefaultAvatar(i),
         totalScore: netScores[p.id] || 0
       }
@@ -281,6 +283,24 @@ Page({
     })
 
     wx.setNavigationBarTitle({ title: room.name })
+  },
+
+  redirectIfSettled(room) {
+    if (!room || room.status !== 'settled' || this._settlementRedirecting || this._endingGame) return
+    this._settlementRedirecting = true
+    showToast('房间已结束')
+    setTimeout(() => {
+      wx.redirectTo({ url: '/pages/settlement/settlement?id=' + room._id })
+    }, 800)
+  },
+
+  ensureRoomPlaying() {
+    const room = this.data.room
+    if (room && room.status === 'settled') {
+      this.redirectIfSettled(room)
+      return false
+    }
+    return true
   },
 
   getDisplayAvatarUrl(avatarUrl) {
@@ -419,6 +439,7 @@ Page({
   // === Tap Chip (unified) ===
 
   onTapChip(e) {
+    if (!this.ensureRoomPlaying()) return
     const id = e.currentTarget.dataset.id
     if (id === '__table__') return this.onTapTable()
     if (id === '__tea__') return this.onTapTeaFee()
@@ -449,7 +470,11 @@ Page({
     if (!player) return
     this.setData({
       showEditProfile: true,
-      editPlayer: { ...player, displayAvatarUrl: this.getDisplayAvatarUrl(player.avatarUrl) },
+      editPlayer: {
+        ...player,
+        displayAvatarUrl: this.getDisplayAvatarUrl(player.avatarUrl),
+        hasDisplayAvatar: isRenderableImageUrl(this.getDisplayAvatarUrl(player.avatarUrl))
+      },
       editName: player.nickname
     })
   },
@@ -465,6 +490,7 @@ Page({
   },
 
   async onPickAvatarColor(e) {
+    if (!this.ensureRoomPlaying()) return
     const color = e.currentTarget.dataset.color
     const { editPlayer, room } = this.data
     const p = room.players.find(pl => pl.id === editPlayer.id)
@@ -474,6 +500,7 @@ Page({
   },
 
   onChooseAvatar() {
+    if (!this.ensureRoomPlaying()) return
     wx.chooseMedia({
       count: 1,
       mediaType: ['image'],
@@ -491,12 +518,21 @@ Page({
         const p = room.players.find(pl => pl.id === editPlayer.id)
         if (p) p.avatarUrl = avatarUrl
         await this.saveRoom(room, { updateFields: ['players'] })
-        this.setData({ editPlayer: { ...editPlayer, avatarUrl } })
+        const displayAvatarUrl = this.getDisplayAvatarUrl(avatarUrl)
+        this.setData({
+          editPlayer: {
+            ...editPlayer,
+            avatarUrl,
+            displayAvatarUrl,
+            hasDisplayAvatar: isRenderableImageUrl(displayAvatarUrl)
+          }
+        })
       }
     })
   },
 
   async onSaveProfile() {
+    if (!this.ensureRoomPlaying()) return
     const { editName, editPlayer, room } = this.data
     const name = editName.trim()
     if (!name) return showToast('昵称不能为空')
@@ -543,6 +579,7 @@ Page({
   },
 
   async onConfirmPay() {
+    if (!this.ensureRoomPlaying()) return
     const { payTarget, payFrom, payAmount } = this.data
     const amount = Math.min(parseInt(payAmount) || 0, 99999)
     if (!amount || amount <= 0) return showToast('请输入有效分数')
@@ -609,6 +646,7 @@ Page({
   // === Tea Fee Panel ===
 
   onTapTeaFee() {
+    if (!this.ensureRoomPlaying()) return
     this.setData({ showTeaPanel: true })
   },
 
@@ -625,6 +663,7 @@ Page({
   },
 
   async onSaveTeaSetting() {
+    if (!this.ensureRoomPlaying()) return
     const { room, teaFeePercent, teaCollectMode } = this.data
     const oldMode = room.teaCollectMode || 'immediate'
     const oldPercent = room.teaFeePercent || 0
@@ -669,6 +708,7 @@ Page({
   },
 
   async onCollectTeaFee() {
+    if (!this.ensureRoomPlaying()) return
     const { room, teaFeePercent } = this.data
     if (!teaFeePercent || teaFeePercent <= 0) return showToast('请先设置茶水费比例')
 
@@ -719,6 +759,7 @@ Page({
   // === Table (台面) ===
 
   onTapTable() {
+    if (!this.ensureRoomPlaying()) return
     const { realPlayers, myPlayerId } = this.data
     const me = realPlayers.find(p => p.id === myPlayerId)
     if (!me) return showToast('未识别当前用户')
@@ -749,6 +790,7 @@ Page({
   },
 
   async onConfirmTable() {
+    if (!this.ensureRoomPlaying()) return
     const { tableDirection, tableFrom, tableAmount, room, tableBalance } = this.data
     const amount = Math.min(parseInt(tableAmount) || 0, 99999)
     if (!amount || amount <= 0) return showToast('请输入有效分数')
@@ -1074,6 +1116,7 @@ Page({
   // === Undo ===
 
   onUndo() {
+    if (!this.ensureRoomPlaying()) return
     const { room, myPlayerId } = this.data
     const txns = room.transactions || []
     if (txns.length === 0) return showToast('没有交易记录')
@@ -1159,6 +1202,7 @@ Page({
       confirmColor: '#1A6B4A',
       success: async (res) => {
         if (!res.confirm) return
+        this._endingGame = true
         const netScores = calculateNetScores(room.transactions, room.players)
         room.status = 'settled'
         room.winner = findWinner(netScores, room.players)

@@ -1,4 +1,4 @@
-const { GAME_TYPES, getDefaultAvatar, showToast } = require('../../utils/util')
+const { GAME_TYPES, getDefaultAvatar, showToast, resolveCloudFileUrls, isRenderableImageUrl } = require('../../utils/util')
 const { calculateNetScores, calculateOptimalTransfers, generateRankings, findWinner, calculateStats } = require('../../utils/settlement')
 const { generateLocalSummary, generateAISummary, generatePlayerComment } = require('../../utils/ai')
 const { applyTheme } = require('../../utils/theme')
@@ -18,6 +18,7 @@ Page({
 
   onLoad(options) {
     applyTheme(this)
+    this.avatarUrlMap = {}
     if (options.id) {
       this.loadSettlement(options.id)
     }
@@ -41,6 +42,8 @@ Page({
 
       const allPlayers = room.players.map((p, i) => ({
         ...p,
+        displayAvatarUrl: this.getDisplayAvatarUrl(p.avatarUrl),
+        hasDisplayAvatar: isRenderableImageUrl(this.getDisplayAvatarUrl(p.avatarUrl)),
         color: getDefaultAvatar(i)
       }))
       const players = allPlayers.filter(p => p.id !== '__tea__' && p.id !== '__table__')
@@ -59,26 +62,39 @@ Page({
         if (fromPlayer) {
           t.from.color = fromPlayer.avatarColor || fromPlayer.color
           t.from.avatarUrl = fromPlayer.avatarUrl || ''
+          t.from.displayAvatarUrl = fromPlayer.displayAvatarUrl || ''
+          t.from.hasDisplayAvatar = fromPlayer.hasDisplayAvatar || false
         }
         if (toPlayer) {
           t.to.color = toPlayer.avatarColor || toPlayer.color
           t.to.avatarUrl = toPlayer.avatarUrl || ''
+          t.to.displayAvatarUrl = toPlayer.displayAvatarUrl || ''
+          t.to.hasDisplayAvatar = toPlayer.hasDisplayAvatar || false
         }
       })
 
       if (winner) {
         const wp = players.find(p => p.id === winner.id)
-        if (wp) winner.color = wp.color
+        if (wp) {
+          winner.color = wp.color
+          winner.displayAvatarUrl = wp.displayAvatarUrl
+          winner.hasDisplayAvatar = wp.hasDisplayAvatar
+        }
       }
 
       const gameInfo = GAME_TYPES[room.gameType] || GAME_TYPES.poker
       const totalCount = room.transactions ? room.transactions.length : (room.rounds || []).length
 
-      const rankingsDisplay = rankings.map(r => ({
-        ...r,
-        scorePrefix: r.totalScore > 0 ? '+' : '',
-        amountText: (r.totalScore > 0 ? '+' : '') + (Math.round(r.totalScore * unitPrice * 10) / 10)
-      }))
+      const rankingsDisplay = rankings.map(r => {
+        const player = players.find(p => p.id === r.id) || {}
+        return {
+          ...r,
+          displayAvatarUrl: player.displayAvatarUrl || '',
+          hasDisplayAvatar: player.hasDisplayAvatar || false,
+          scorePrefix: r.totalScore > 0 ? '+' : '',
+          amountText: (r.totalScore > 0 ? '+' : '') + (Math.round(r.totalScore * unitPrice * 10) / 10)
+        }
+      })
 
       this.setData({
         room: { ...room, gameTypeName: gameInfo.name },
@@ -91,10 +107,30 @@ Page({
       })
 
       this.generateSummary(room, players, netScores, rankings)
+      this.resolveSettlementAvatarUrls(room)
     } catch (e) {
       console.error('加载结算失败:', e)
       showToast('加载失败')
     }
+  },
+
+  getDisplayAvatarUrl(avatarUrl) {
+    if (!avatarUrl) return ''
+    return (this.avatarUrlMap && this.avatarUrlMap[avatarUrl]) || avatarUrl
+  },
+
+  resolveSettlementAvatarUrls(room) {
+    const urls = (room.players || [])
+      .map(player => player.avatarUrl)
+      .filter(url => url && url.startsWith('cloud://') && !(this.avatarUrlMap && this.avatarUrlMap[url]))
+    if (urls.length === 0) return
+    resolveCloudFileUrls(urls).then(map => {
+      if (!map || Object.keys(map).length === 0) return
+      this.avatarUrlMap = { ...(this.avatarUrlMap || {}), ...map }
+      this.loadSettlement(room._id)
+    }).catch(err => {
+      console.warn('resolve settlement avatar urls failed', err)
+    })
   },
 
   async generateSummary(room, players, netScores, rankings) {

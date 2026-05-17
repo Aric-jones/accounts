@@ -97,6 +97,10 @@ const resolveCloudFileUrls = async (urls) => {
   return map
 }
 
+const isRenderableImageUrl = url => {
+  return !!url && !url.startsWith('cloud://')
+}
+
 module.exports = {
   formatTime,
   formatDate,
@@ -105,6 +109,7 @@ module.exports = {
   getClientId,
   ensureCloudAvatar,
   resolveCloudFileUrls,
+  isRenderableImageUrl,
   GAME_TYPES,
   getDefaultAvatar,
   showToast,

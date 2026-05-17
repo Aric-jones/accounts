@@ -1,4 +1,4 @@
-const { GAME_TYPES, formatTime, getDefaultAvatar } = require('../../utils/util')
+const { GAME_TYPES, formatTime, getDefaultAvatar, resolveCloudFileUrls, isRenderableImageUrl } = require('../../utils/util')
 const { calculateNetScores, generateRankings, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
 
@@ -18,6 +18,7 @@ Page({
 
   onLoad() {
     applyTheme(this)
+    this.avatarUrlMap = {}
   },
 
   onShow() {
@@ -37,9 +38,13 @@ Page({
       })
       const cloudRooms = (res.result && res.result.data) || []
       const localRooms = wx.getStorageSync('localRooms') || []
+      const hiddenRoomIds = wx.getStorageSync('hiddenHistoryRoomIds') || []
+      const hiddenMap = {}
+      hiddenRoomIds.forEach(id => { hiddenMap[id] = true })
       const roomMap = {}
       cloudRooms.concat(localRooms).forEach(room => {
         if (!room || !room._id) return
+        if (hiddenMap[room._id]) return
         roomMap[room._id] = {
           ...(roomMap[room._id] || {}),
           ...room
@@ -49,6 +54,7 @@ Page({
         .filter(r => r.status === 'settled')
         .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
 
+      this.resolveHistoryAvatarUrls(settledRooms)
       const formatted = settledRooms.map(room => this.formatHistoryRoom(room))
 
       let totalTxns = 0
@@ -74,6 +80,8 @@ Page({
     const gameInfo = GAME_TYPES[room.gameType] || GAME_TYPES.poker
     const allPlayers = (room.players || []).map((p, i) => ({
       ...p,
+      displayAvatarUrl: this.getDisplayAvatarUrl(p.avatarUrl),
+      hasDisplayAvatar: isRenderableImageUrl(this.getDisplayAvatarUrl(p.avatarUrl)),
       color: p.avatarColor || getDefaultAvatar(i)
     }))
     const players = allPlayers.filter(p => p.id !== '__tea__' && p.id !== '__table__')
@@ -91,6 +99,30 @@ Page({
       rankings,
       winner
     }
+  },
+
+  getDisplayAvatarUrl(avatarUrl) {
+    if (!avatarUrl) return ''
+    return (this.avatarUrlMap && this.avatarUrlMap[avatarUrl]) || avatarUrl
+  },
+
+  resolveHistoryAvatarUrls(rooms) {
+    const urls = []
+    ;(rooms || []).forEach(room => {
+      ;(room.players || []).forEach(player => {
+        if (player.avatarUrl && player.avatarUrl.startsWith('cloud://') && !(this.avatarUrlMap && this.avatarUrlMap[player.avatarUrl])) {
+          urls.push(player.avatarUrl)
+        }
+      })
+    })
+    if (urls.length === 0) return
+    resolveCloudFileUrls(urls).then(map => {
+      if (!map || Object.keys(map).length === 0) return
+      this.avatarUrlMap = { ...(this.avatarUrlMap || {}), ...map }
+      this.loadHistory()
+    }).catch(err => {
+      console.warn('resolve history avatar urls failed', err)
+    })
   },
 
   onFilter(e) {
@@ -123,6 +155,11 @@ Page({
           name: 'getHistory',
           data: { action: 'delete', roomId }
         }).then(() => {
+          const hidden = wx.getStorageSync('hiddenHistoryRoomIds') || []
+          if (!hidden.includes(roomId)) {
+            hidden.push(roomId)
+            wx.setStorageSync('hiddenHistoryRoomIds', hidden)
+          }
           this.loadHistory()
           wx.showToast({ title: '已删除', icon: 'success' })
         }).catch(() => {
@@ -142,7 +179,18 @@ Page({
         const localRooms = wx.getStorageSync('localRooms') || []
         const kept = localRooms.filter(r => r.status !== 'settled')
         wx.setStorageSync('localRooms', kept)
-        this.loadHistory()
+        const roomIds = this.data.allRooms.map(room => room._id)
+        wx.cloud.callFunction({
+          name: 'getHistory',
+          data: { action: 'clear', roomIds }
+        }).finally(() => {
+          const hidden = wx.getStorageSync('hiddenHistoryRoomIds') || []
+          roomIds.forEach(id => {
+            if (!hidden.includes(id)) hidden.push(id)
+          })
+          wx.setStorageSync('hiddenHistoryRoomIds', hidden)
+          this.loadHistory()
+        })
         wx.showToast({ title: '已清空', icon: 'success' })
       }
     })

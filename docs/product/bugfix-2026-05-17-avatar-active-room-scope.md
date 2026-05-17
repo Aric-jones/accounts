@@ -48,6 +48,13 @@ L2：涉及共享头像工具、房间参与者识别、首页跨页面展示范
 - 首页加载前补充获取 `openid`，并用 `openid/clientId/roomPlayerIds/myRoomIds` 限定当前用户相关房间。
 - 首页合并本地缓存时继续以本地已结算状态为剔除依据。
 
+## 云函数更新说明
+
+- 本次提交没有修改 `cloudfunctions/` 下的云函数源码。
+- 本次提交不需要重新上传或重新部署云函数。
+- 首页筛选依赖既有 `getHistory` 云函数的 `action: 'getOpenid'` 能力；若线上环境此前没有部署包含该能力的 `getHistory`，需要先部署 `cloudfunctions/getHistory`。
+- 创建、加入、记账、头像回写仍依赖既有 `joinRoom`、`recordScore` 与微信云存储能力；本次没有新增云函数契约。
+
 ## 验证记录
 
 - [x] `node --check miniprogram/utils/util.js`

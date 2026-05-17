@@ -70,6 +70,7 @@ L2：涉及共享头像工具、房间参与者识别、首页跨页面展示范
 - 房间页 `_updateRoomData` 需输出每个真实玩家的 `avatarUrl/displayAvatarUrl/hasDisplayAvatar`，用于判断对方头像是“未写入房间”“未解析临时 URL”还是“已解析但渲染失败”。
 - 展示头像时应优先使用全局 `userProfiles[openid].avatarUrl`，其次使用房间 `players[].avatarUrl` 快照；更换头像的语义是修改“我的用户头像”，不是只修改某一局游戏里的玩家头像。
 - 房间页新增头像测试入口，用于预览本局所有玩家头像，并列出房间头像、全局头像、实际展示头像、临时 URL 与渲染判断。
+- 调试面板里如果 `display` 仍是 `cloud://`，即使有头像链接也不能被 `<image>` 稳定展示；必须先通过 `wx.cloud.getTempFileURL` 转成 `https://`。调试入口需要收集房间头像、全局头像、最终头像的所有候选 URL 后再解析。
 
 ## 验证记录
 

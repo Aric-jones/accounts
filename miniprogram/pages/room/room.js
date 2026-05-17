@@ -458,6 +458,17 @@ Page({
     return (this.globalProfileMap && this.globalProfileMap[player.openid]) || {}
   },
 
+  getPlayerAvatarCandidates(player) {
+    if (!player) return []
+    const globalProfile = this.getPlayerGlobalProfile(player)
+    return [
+      globalProfile.avatarUrl,
+      player.globalAvatarUrl,
+      player.avatarUrl,
+      player.roomAvatarUrl
+    ].filter(Boolean)
+  },
+
   loadRoomGlobalProfiles(room) {
     const openids = (room.players || [])
       .filter(player => player && player.id !== '__tea__' && player.id !== '__table__' && player.openid)
@@ -477,7 +488,10 @@ Page({
         roomId: room && room._id,
         map
       })
-      const urls = Object.keys(map).map(openid => map[openid] && map[openid].avatarUrl).filter(Boolean)
+      const urls = (room.players || []).flatMap(player => {
+        const profile = player.openid ? map[player.openid] : null
+        return [profile && profile.avatarUrl, player.avatarUrl]
+      }).filter(Boolean)
       this.resolveAvatarUrls(urls, room)
       const currentRoom = this.data.room
       if (currentRoom && currentRoom._id === room._id) {
@@ -610,12 +624,15 @@ Page({
 
 
   async onShowAvatarDebug() {
-    const avatarUrls = (this.data.realPlayers || []).map(player => player.avatarUrl).filter(Boolean)
+    const avatarUrls = (this.data.realPlayers || []).flatMap(player => this.getPlayerAvatarCandidates(player))
     await this.resolveAvatarUrlsForDebug(avatarUrls)
     const { realPlayers } = this.data
     const rows = (realPlayers || []).map(player => {
       const globalProfile = this.getPlayerGlobalProfile(player)
-      const finalAvatarUrl = globalProfile.avatarUrl || player.globalAvatarUrl || player.avatarUrl || ''
+      const finalAvatarUrl = this.getPlayerAvatarCandidates({
+        ...player,
+        globalAvatarUrl: globalProfile.avatarUrl || player.globalAvatarUrl || ''
+      })[0] || ''
       const displayAvatarUrl = this.getDisplayAvatarUrl(finalAvatarUrl)
       return {
         id: player.id,

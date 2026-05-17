@@ -1,4 +1,4 @@
-const { GAME_TYPES, generateId, getClientId, ensureCloudAvatar, showToast } = require('../../utils/util')
+const { GAME_TYPES, generateId, getClientId, ensureCloudAvatar, saveGlobalUserProfile, showToast } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 
 Page({
@@ -82,6 +82,11 @@ Page({
       console.warn('upload avatar failed', err)
       console.log('[avatar][create] upload-fail', { clientId, openid, avatarUrl, err })
     }
+    saveGlobalUserProfile({
+      nickName: userInfo.nickName || '',
+      avatarUrl,
+      clientId
+    }).catch(err => console.warn('save global profile failed', err))
 
     // Only the creator is in the room initially
     const creator = {

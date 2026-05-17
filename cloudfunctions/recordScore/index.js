@@ -4,9 +4,46 @@ const db = cloud.database()
 const _ = db.command
 
 exports.main = async (event, context) => {
-  const { roomId, roundScores, action, room = {}, deletedTransactionIds = [], updateFields = null } = event
+  const wxContext = cloud.getWXContext()
+  const { roomId, roundScores, action, room = {}, deletedTransactionIds = [], updateFields = null, profile = {}, openids = [] } = event
 
   try {
+    if (action === 'saveUserProfile') {
+      if (!wxContext.OPENID) return { code: -1, errMsg: 'openid missing' }
+      const now = new Date()
+      const data = {
+        openid: wxContext.OPENID,
+        nickName: profile.nickName || '',
+        avatarUrl: profile.avatarUrl || '',
+        clientId: profile.clientId || '',
+        updatedAt: now
+      }
+      const exist = await db.collection('userProfiles')
+        .where({ openid: wxContext.OPENID })
+        .limit(1)
+        .get()
+      if (exist.data && exist.data.length > 0) {
+        await db.collection('userProfiles').doc(exist.data[0]._id).update({ data })
+        return { code: 0, data: { ...exist.data[0], ...data } }
+      }
+      const addRes = await db.collection('userProfiles').add({
+        data: {
+          ...data,
+          createdAt: now
+        }
+      })
+      return { code: 0, data: { _id: addRes._id, ...data, createdAt: now } }
+    }
+
+    if (action === 'getUserProfiles') {
+      const list = [...new Set((openids || []).filter(Boolean))]
+      if (list.length === 0) return { code: 0, data: [] }
+      const res = await db.collection('userProfiles')
+        .where({ openid: _.in(list) })
+        .get()
+      return { code: 0, data: res.data || [] }
+    }
+
     if (action === 'saveRoom') {
       const docRes = await db.collection('rooms').doc(roomId).get()
       const current = docRes.data || {}

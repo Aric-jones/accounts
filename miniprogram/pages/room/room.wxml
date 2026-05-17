@@ -22,6 +22,7 @@
       </view>
       <view class="action-right">
         <view class="voice-btn {{voiceEnabled ? 'active' : ''}}" bindtap="onToggleVoice" hover-class="btn-hover">{{voiceEnabled ? '🔊' : '🔇'}}</view>
+        <view class="chart-btn" bindtap="onShowAvatarDebug" hover-class="btn-hover">??</view>
         <view class="chart-btn" bindtap="onShowChart" wx:if="{{room.transactions.length > 0}}" hover-class="btn-hover">📈走势</view>
         <view class="undo-btn" bindtap="onUndo" wx:if="{{room.transactions.length > 0}}" hover-class="btn-hover">撤销</view>
         <view class="settle-btn" bindtap="onEndGame" hover-class="btn-hover">结算</view>

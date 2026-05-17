@@ -1,4 +1,4 @@
-const { generateId, getClientId, ensureCloudAvatar, showToast, showLoading, hideLoading } = require('../../utils/util')
+const { generateId, getClientId, ensureCloudAvatar, saveGlobalUserProfile, showToast, showLoading, hideLoading } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 
 Page({
@@ -89,6 +89,11 @@ Page({
         console.warn('upload avatar failed', err)
         console.log('[avatar][join] upload-fail', { shareCode, clientId, avatarUrl, err })
       }
+      saveGlobalUserProfile({
+        nickName: userInfo.nickName || '',
+        avatarUrl,
+        clientId
+      }).catch(err => console.warn('save global profile failed', err))
       const player = {
         id: generateId(),
         nickname: userInfo.nickName || '牌友',

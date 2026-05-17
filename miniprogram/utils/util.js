@@ -187,6 +187,61 @@ const shouldRenderAvatar = (avatarUrl, displayAvatarUrl, allowLocalPreview = fal
   return isRenderableImageUrl(displayAvatarUrl)
 }
 
+const saveGlobalUserProfile = async (profile = {}) => {
+  const data = {
+    nickName: profile.nickName || '',
+    avatarUrl: profile.avatarUrl || '',
+    clientId: profile.clientId || getClientId()
+  }
+  logAvatar('saveGlobalUserProfile:start', data)
+  if (!wx.cloud || typeof wx.cloud.callFunction !== 'function') {
+    logAvatar('saveGlobalUserProfile:skip', { reason: 'wx.cloud.callFunction-unavailable', data })
+    return null
+  }
+  try {
+    const res = await wx.cloud.callFunction({
+      name: 'recordScore',
+      data: {
+        action: 'saveUserProfile',
+        profile: data
+      }
+    })
+    logAvatar('saveGlobalUserProfile:result', res.result || res)
+    return res.result
+  } catch (err) {
+    logAvatar('saveGlobalUserProfile:fail', { data, err })
+    throw err
+  }
+}
+
+const fetchGlobalUserProfiles = async (openids = []) => {
+  const list = [...new Set((openids || []).filter(Boolean))]
+  logAvatar('fetchGlobalUserProfiles:start', { openids: list })
+  if (list.length === 0) return {}
+  if (!wx.cloud || typeof wx.cloud.callFunction !== 'function') {
+    logAvatar('fetchGlobalUserProfiles:skip', { reason: 'wx.cloud.callFunction-unavailable', openids: list })
+    return {}
+  }
+  try {
+    const res = await wx.cloud.callFunction({
+      name: 'recordScore',
+      data: {
+        action: 'getUserProfiles',
+        openids: list
+      }
+    })
+    const map = {}
+    ;((res.result && res.result.data) || []).forEach(item => {
+      if (item && item.openid) map[item.openid] = item
+    })
+    logAvatar('fetchGlobalUserProfiles:result', { count: Object.keys(map).length, map })
+    return map
+  } catch (err) {
+    logAvatar('fetchGlobalUserProfiles:fail', { openids: list, err })
+    return {}
+  }
+}
+
 module.exports = {
   formatTime,
   formatDate,
@@ -198,6 +253,8 @@ module.exports = {
   isRenderableImageUrl,
   isPreviewableImageUrl,
   shouldRenderAvatar,
+  saveGlobalUserProfile,
+  fetchGlobalUserProfiles,
   GAME_TYPES,
   getDefaultAvatar,
   showToast,

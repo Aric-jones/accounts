@@ -1,4 +1,4 @@
-const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureCloudAvatar, resolveCloudFileUrls, shouldRenderAvatar } = require('../../utils/util')
+const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureCloudAvatar, resolveCloudFileUrls, shouldRenderAvatar, saveGlobalUserProfile, fetchGlobalUserProfiles } = require('../../utils/util')
 const { calculateNetScores, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
 const voice = require('../../utils/voice')
@@ -51,6 +51,7 @@ Page({
     voice.init()
     this.setData({ voiceEnabled: voice.isEnabled() })
     this.avatarUrlMap = {}
+    this.globalProfileMap = {}
     if (options.id) {
       this.roomId = options.id
       this.loadRoom(options.id)
@@ -161,6 +162,7 @@ Page({
   _updateRoomData(room) {
     room.transactions = room.transactions || []
 
+    this.loadRoomGlobalProfiles(room)
     this.resolveRoomAvatarUrls(room)
     this.redirectIfSettled(room)
 
@@ -182,11 +184,16 @@ Page({
     let teaPlayer = null
     let tablePlayer = null
     allPlayers.forEach((p, i) => {
-      const displayAvatarUrl = this.getDisplayAvatarUrl(p.avatarUrl)
+      const globalProfile = this.getPlayerGlobalProfile(p)
+      const avatarUrl = globalProfile.avatarUrl || p.avatarUrl || ''
+      const displayAvatarUrl = this.getDisplayAvatarUrl(avatarUrl)
       const enriched = {
         ...p,
+        globalAvatarUrl: globalProfile.avatarUrl || '',
+        roomAvatarUrl: p.avatarUrl || '',
+        avatarUrl,
         displayAvatarUrl,
-        hasDisplayAvatar: shouldRenderAvatar(p.avatarUrl, displayAvatarUrl),
+        hasDisplayAvatar: shouldRenderAvatar(avatarUrl, displayAvatarUrl),
         color: p.avatarColor || getDefaultAvatar(i),
         totalScore: netScores[p.id] || 0
       }
@@ -201,6 +208,8 @@ Page({
         id: p.id,
         nickname: p.nickname,
         avatarUrl: p.avatarUrl,
+        roomAvatarUrl: p.roomAvatarUrl,
+        globalAvatarUrl: p.globalAvatarUrl,
         displayAvatarUrl: p.displayAvatarUrl,
         hasDisplayAvatar: p.hasDisplayAvatar
       }))
@@ -368,6 +377,12 @@ Page({
         return
       }
 
+      saveGlobalUserProfile({
+        nickName: player.nickname || '',
+        avatarUrl: player.avatarUrl || '',
+        clientId: player.clientId || getClientId()
+      }).catch(err => console.warn('save global profile failed', err))
+
       console.log('[avatar][room] syncMyProfileToRoom:save', {
         roomId: room._id,
         myPlayerId,
@@ -436,10 +451,71 @@ Page({
     return (this.avatarUrlMap && this.avatarUrlMap[avatarUrl]) || avatarUrl
   },
 
-  resolveRoomAvatarUrls(room) {
-    const cloudUrls = (room.players || [])
-      .map(player => player.avatarUrl)
+  getPlayerGlobalProfile(player) {
+    if (!player || !player.openid) return {}
+    return (this.globalProfileMap && this.globalProfileMap[player.openid]) || {}
+  },
+
+  loadRoomGlobalProfiles(room) {
+    const openids = (room.players || [])
+      .filter(player => player && player.id !== '__tea__' && player.id !== '__table__' && player.openid)
+      .map(player => player.openid)
+    const missing = [...new Set(openids.filter(openid => !(this.globalProfileMap && this.globalProfileMap[openid])))]
+    console.log('[avatar][room] loadRoomGlobalProfiles', {
+      roomId: room && room._id,
+      openids,
+      missing
+    })
+    if (missing.length === 0 || this._loadingGlobalProfiles) return
+
+    this._loadingGlobalProfiles = true
+    fetchGlobalUserProfiles(missing).then(map => {
+      this.globalProfileMap = { ...(this.globalProfileMap || {}), ...map }
+      console.log('[avatar][room] loadRoomGlobalProfiles:map', {
+        roomId: room && room._id,
+        map
+      })
+      const urls = Object.keys(map).map(openid => map[openid] && map[openid].avatarUrl).filter(Boolean)
+      this.resolveAvatarUrls(urls, room)
+      const currentRoom = this.data.room
+      if (currentRoom && currentRoom._id === room._id) {
+        this._updateRoomData(currentRoom)
+      }
+    }).catch(err => {
+      console.log('[avatar][room] loadRoomGlobalProfiles:fail', {
+        roomId: room && room._id,
+        err
+      })
+    }).finally(() => {
+      this._loadingGlobalProfiles = false
+    })
+  },
+
+  resolveAvatarUrls(urls, room) {
+    const cloudUrls = (urls || [])
       .filter(url => url && url.startsWith('cloud://') && !(this.avatarUrlMap && this.avatarUrlMap[url]))
+    if (cloudUrls.length === 0) return
+    resolveCloudFileUrls(cloudUrls).then(map => {
+      if (!map || Object.keys(map).length === 0) return
+      this.avatarUrlMap = { ...(this.avatarUrlMap || {}), ...map }
+      console.log('[avatar][room] resolveAvatarUrls:map', {
+        roomId: room && room._id,
+        map
+      })
+      const currentRoom = this.data.room
+      if (currentRoom && room && currentRoom._id === room._id) {
+        this._updateRoomData(currentRoom)
+      }
+    }).catch(err => {
+      console.warn('resolve avatar urls failed', err)
+    })
+  },
+
+  resolveRoomAvatarUrls(room) {
+    const cloudUrls = (room.players || []).flatMap(player => {
+      const globalProfile = this.getPlayerGlobalProfile(player)
+      return [player.avatarUrl, globalProfile.avatarUrl]
+    }).filter(url => url && url.startsWith('cloud://') && !(this.avatarUrlMap && this.avatarUrlMap[url]))
     console.log('[avatar][room] resolveRoomAvatarUrls', {
       roomId: room && room._id,
       cloudUrls,
@@ -528,6 +604,38 @@ Page({
     voice.setEnabled(val)
     this.setData({ voiceEnabled: val })
     showToast(val ? '语音已开启' : '语音已关闭')
+  },
+
+
+  onShowAvatarDebug() {
+    const { realPlayers } = this.data
+    const rows = (realPlayers || []).map(player => {
+      const globalProfile = this.getPlayerGlobalProfile(player)
+      return {
+        id: player.id,
+        nickname: player.nickname,
+        openid: player.openid || '',
+        roomAvatarUrl: player.roomAvatarUrl || '',
+        globalAvatarUrl: globalProfile.avatarUrl || player.globalAvatarUrl || '',
+        finalAvatarUrl: player.avatarUrl || '',
+        displayAvatarUrl: player.displayAvatarUrl || '',
+        hasDisplayAvatar: !!player.hasDisplayAvatar
+      }
+    })
+    console.log('[avatar][room] debug-list', rows)
+    const text = rows.map(item => [
+      item.nickname + ' / ' + item.id,
+      'room=' + (item.roomAvatarUrl || 'empty'),
+      'global=' + (item.globalAvatarUrl || 'empty'),
+      'display=' + (item.displayAvatarUrl || 'empty'),
+      'show=' + item.hasDisplayAvatar
+    ].join('\n')).join('\n\n')
+    wx.setClipboardData({ data: JSON.stringify(rows, null, 2) })
+    wx.showModal({
+      title: 'Avatar Debug',
+      content: (text || 'No players').slice(0, 900),
+      showCancel: false
+    })
   },
 
   onShowQrCode() {
@@ -710,6 +818,19 @@ Page({
             })
           }
         }
+        saveGlobalUserProfile({
+          nickName: this.data.editName || editPlayer.nickname || '',
+          avatarUrl,
+          clientId: editPlayer.clientId || getClientId()
+        }).catch(err => console.warn('save global profile failed', err))
+        const localUserInfo = wx.getStorageSync('userInfo') || {}
+        const nextUserInfo = {
+          ...localUserInfo,
+          nickName: this.data.editName || editPlayer.nickname || localUserInfo.nickName || '',
+          avatarUrl
+        }
+        wx.setStorageSync('userInfo', nextUserInfo)
+        getApp().globalData.userInfo = nextUserInfo
         const displayAvatarUrl = this.getDisplayAvatarUrl(avatarUrl)
         console.log('[avatar][room] onChooseAvatar:after-save', {
           roomId: room && room._id,
@@ -747,6 +868,19 @@ Page({
       })
     }
     await this.saveRoom(room, { updateFields: ['players', 'transactions'] })
+    saveGlobalUserProfile({
+      nickName: name,
+      avatarUrl: p ? (p.avatarUrl || '') : (editPlayer.avatarUrl || ''),
+      clientId: editPlayer.clientId || getClientId()
+    }).catch(err => console.warn('save global profile failed', err))
+    const localUserInfo = wx.getStorageSync('userInfo') || {}
+    const nextUserInfo = {
+      ...localUserInfo,
+      nickName: name,
+      avatarUrl: p ? (p.avatarUrl || localUserInfo.avatarUrl || '') : (editPlayer.avatarUrl || localUserInfo.avatarUrl || '')
+    }
+    wx.setStorageSync('userInfo', nextUserInfo)
+    getApp().globalData.userInfo = nextUserInfo
     this.setData({ showEditProfile: false, editPlayer: null })
     showToast('已保存')
   },

@@ -1,4 +1,4 @@
-const { ensureCloudAvatar, showToast, showLoading, hideLoading } = require('../../utils/util')
+const { ensureCloudAvatar, getClientId, saveGlobalUserProfile, showToast, showLoading, hideLoading } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 const { calculateNetScores } = require('../../utils/settlement')
 
@@ -117,6 +117,11 @@ Page({
       this.setData({ userInfo: nextUserInfo })
       wx.setStorageSync('userInfo', nextUserInfo)
       getApp().globalData.userInfo = nextUserInfo
+      saveGlobalUserProfile({
+        nickName: nextUserInfo.nickName || '',
+        avatarUrl: nextUserInfo.avatarUrl || '',
+        clientId: getClientId()
+      }).catch(err => console.warn('save global profile failed', err))
       hideLoading()
       showToast('头像已更新')
       return
@@ -136,6 +141,11 @@ Page({
       this.setData({ userInfo })
       wx.setStorageSync('userInfo', userInfo)
       getApp().globalData.userInfo = userInfo
+      saveGlobalUserProfile({
+        nickName: userInfo.nickName || '',
+        avatarUrl: userInfo.avatarUrl || '',
+        clientId: getClientId()
+      }).catch(err => console.warn('save global profile failed', err))
     }
   },
 

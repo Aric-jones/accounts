@@ -22,7 +22,6 @@
       </view>
       <view class="action-right">
         <view class="voice-btn {{voiceEnabled ? 'active' : ''}}" bindtap="onToggleVoice" hover-class="btn-hover">{{voiceEnabled ? '🔊' : '🔇'}}</view>
-        <view class="chart-btn" bindtap="onShowAvatarDebug" hover-class="btn-hover">头像</view>
         <view class="chart-btn" bindtap="onShowChart" wx:if="{{room.transactions.length > 0}}" hover-class="btn-hover">📈走势</view>
         <view class="undo-btn" bindtap="onUndo" wx:if="{{room.transactions.length > 0}}" hover-class="btn-hover">撤销</view>
         <view class="settle-btn" bindtap="onEndGame" hover-class="btn-hover">结算</view>
@@ -171,32 +170,6 @@
 </view>
 
 <!-- ========== 茶水费设置弹窗 ========== -->
-
-
-<!-- ========== ?????? ========== -->
-<view class="pay-mask" wx:if="{{showAvatarDebug}}" bindtap="onCloseAvatarDebug"></view>
-<view class="avatar-debug-panel {{showAvatarDebug ? 'show' : ''}}">
-  <view class="panel-head">
-    <text class="panel-title">????</text>
-    <view class="panel-close" bindtap="onCloseAvatarDebug">X</view>
-  </view>
-  <scroll-view scroll-y class="avatar-debug-list">
-    <view class="avatar-debug-item" wx:for="{{avatarDebugRows}}" wx:key="id">
-      <view class="avatar-debug-preview">
-        <image wx:if="{{item.hasDisplayAvatar}}" src="{{item.displayAvatarUrl}}" mode="aspectFill" class="avatar-debug-img" />
-        <text wx:else>{{item.nickname ? item.nickname[0] : '?'}}</text>
-      </view>
-      <view class="avatar-debug-info">
-        <text class="avatar-debug-name">{{item.nickname}} / {{item.id}}</text>
-        <text class="avatar-debug-line">show: {{item.hasDisplayAvatar}}</text>
-        <text class="avatar-debug-line">room: {{item.roomAvatarUrl || 'empty'}}</text>
-        <text class="avatar-debug-line">global: {{item.globalAvatarUrl || 'empty'}}</text>
-        <text class="avatar-debug-line">display: {{item.displayAvatarUrl || 'empty'}}</text>
-      </view>
-    </view>
-  </scroll-view>
-</view>
-
 <view class="pay-mask" wx:if="{{showTeaPanel}}" bindtap="onCloseTeaPanel"></view>
 <view class="pay-panel tea-panel {{showTeaPanel ? 'show' : ''}}">
   <view class="panel-head">

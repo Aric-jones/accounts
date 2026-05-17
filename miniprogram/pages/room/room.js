@@ -16,8 +16,6 @@ Page({
     showEditProfile: false,
     showTeaPanel: false,
     showChart: false,
-    showAvatarDebug: false,
-    avatarDebugRows: [],
     showQrPanel: false,
     qrCodeUrl: '',
     qrLoading: false,
@@ -622,52 +620,6 @@ Page({
     showToast(val ? '语音已开启' : '语音已关闭')
   },
 
-
-  async onShowAvatarDebug() {
-    const avatarUrls = (this.data.realPlayers || []).flatMap(player => this.getPlayerAvatarCandidates(player))
-    await this.resolveAvatarUrlsForDebug(avatarUrls)
-    const { realPlayers } = this.data
-    const rows = (realPlayers || []).map(player => {
-      const globalProfile = this.getPlayerGlobalProfile(player)
-      const finalAvatarUrl = this.getPlayerAvatarCandidates({
-        ...player,
-        globalAvatarUrl: globalProfile.avatarUrl || player.globalAvatarUrl || ''
-      })[0] || ''
-      const displayAvatarUrl = this.getDisplayAvatarUrl(finalAvatarUrl)
-      return {
-        id: player.id,
-        nickname: player.nickname,
-        openid: player.openid || '',
-        roomAvatarUrl: player.roomAvatarUrl || '',
-        globalAvatarUrl: globalProfile.avatarUrl || player.globalAvatarUrl || '',
-        finalAvatarUrl,
-        displayAvatarUrl,
-        hasDisplayAvatar: shouldRenderAvatar(finalAvatarUrl, displayAvatarUrl)
-      }
-    })
-    console.log('[avatar][room] debug-list', rows)
-    wx.setClipboardData({ data: JSON.stringify(rows, null, 2) })
-    this.setData({ showAvatarDebug: true, avatarDebugRows: rows })
-  },
-
-  async resolveAvatarUrlsForDebug(urls) {
-    const cloudUrls = (urls || [])
-      .filter(url => url && url.startsWith('cloud://') && !(this.avatarUrlMap && this.avatarUrlMap[url]))
-    if (cloudUrls.length === 0) return
-    try {
-      const map = await resolveCloudFileUrls(cloudUrls)
-      this.avatarUrlMap = { ...(this.avatarUrlMap || {}), ...map }
-      console.log('[avatar][room] debug-resolve-map', map)
-      const currentRoom = this.data.room
-      if (currentRoom) this._updateRoomData(currentRoom)
-    } catch (err) {
-      console.log('[avatar][room] debug-resolve-fail', { cloudUrls, err })
-    }
-  },
-
-  onCloseAvatarDebug() {
-    this.setData({ showAvatarDebug: false })
-  },
 
   onShowQrCode() {
     this.setData({ showQrPanel: true })

@@ -308,7 +308,6 @@ Page({
     if (this._repairingAvatar || !room || !myPlayerId || room.status === 'settled') return
     const player = (room.players || []).find(p => p.id === myPlayerId)
     if (!player || !player.avatarUrl) return
-    if (player.avatarUrl.startsWith('cloud://') || player.avatarUrl.startsWith('http://') || player.avatarUrl.startsWith('https://')) return
 
     this._repairingAvatar = true
     try {

@@ -1,4 +1,4 @@
-const { GAME_TYPES, formatRelativeTime, getDefaultAvatar } = require('../../utils/util')
+const { GAME_TYPES, formatRelativeTime, getDefaultAvatar, getClientId } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 
 Page({
@@ -26,33 +26,97 @@ Page({
     wx.stopPullDownRefresh()
   },
 
-  loadRooms() {
+  async loadRooms() {
     this.setData({ loading: true })
     const localRooms = wx.getStorageSync('localRooms') || []
+    const roomPlayerIds = wx.getStorageSync('roomPlayerIds') || {}
+    const myRoomIds = wx.getStorageSync('myRoomIds') || []
+    const app = getApp()
+    let openid = app.globalData.openid || ''
+    if (!openid && wx.cloud) {
+      try {
+        const res = await wx.cloud.callFunction({ name: 'getHistory', data: { action: 'getOpenid' } })
+        openid = (res.result && res.result.openid) || ''
+        if (openid) app.globalData.openid = openid
+      } catch (err) {
+        console.warn('get openid for active rooms failed', err)
+      }
+    }
+    const clientId = getClientId()
     const localRoomMap = {}
+
     localRooms.forEach(room => {
       if (room && room._id) localRoomMap[room._id] = room
     })
-    const db = wx.cloud.database()
-    db.collection('rooms').where({ status: 'playing' }).orderBy('updatedAt', 'desc').get().then(res => {
-      const rooms = (res.data || []).filter(room => {
-        const localRoom = localRoomMap[room._id]
-        if (localRoom && localRoom.status !== 'playing') return false
-        return room.status === 'playing'
-      }).map(room => {
-        const localRoom = localRoomMap[room._id]
-        const cloudTime = new Date(room.updatedAt || room.createdAt || 0).getTime()
-        const localTime = localRoom ? new Date(localRoom.updatedAt || localRoom.createdAt || 0).getTime() : 0
-        return localRoom && localTime > cloudTime ? localRoom : room
-      }).filter(room => room.status === 'playing')
-      const activeRooms = rooms.map(r => this.formatRoom(r))
-      this.setData({ activeRooms, loading: false })
-    }).catch(err => {
-      console.error('加载房间列表失败', err)
-      const activeRooms = localRooms
+
+    const isMyRoom = room => {
+      if (!room || !room._id) return false
+      if (roomPlayerIds[room._id] || myRoomIds.includes(room._id)) return true
+      if (openid && room.createdBy === openid) return true
+      return (room.players || []).some(player => {
+        if (openid && player.openid === openid) return true
+        return clientId && player.clientId === clientId
+      })
+    }
+
+    const isActiveMyRoom = room => {
+      if (!room || room.status !== 'playing') return false
+      const localRoom = localRoomMap[room._id]
+      if (localRoom && localRoom.status !== 'playing') return false
+      return isMyRoom(room) || isMyRoom(localRoom)
+    }
+
+    const pickLatestRoom = room => {
+      const localRoom = localRoomMap[room._id]
+      const cloudTime = new Date(room.updatedAt || room.createdAt || 0).getTime()
+      const localTime = localRoom ? new Date(localRoom.updatedAt || localRoom.createdAt || 0).getTime() : 0
+      return localRoom && localTime > cloudTime ? localRoom : room
+    }
+
+    const buildActiveRooms = cloudRooms => {
+      const roomMap = {}
+      ;(cloudRooms || []).forEach(room => {
+        if (isActiveMyRoom(room)) roomMap[room._id] = pickLatestRoom(room)
+      })
+      localRooms.forEach(room => {
+        if (isActiveMyRoom(room) && !roomMap[room._id]) roomMap[room._id] = room
+      })
+      return Object.keys(roomMap)
+        .map(id => roomMap[id])
         .filter(room => room.status === 'playing')
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
         .map(room => this.formatRoom(room))
-      this.setData({ activeRooms, loading: false })
+    }
+
+    const db = wx.cloud.database()
+    const _ = db.command
+    const queries = []
+    if (openid) {
+      queries.push(db.collection('rooms').where({
+        status: 'playing',
+        createdBy: openid
+      }).get())
+      queries.push(db.collection('rooms').where({
+        status: 'playing',
+        players: _.elemMatch({ openid })
+      }).get())
+    }
+    if (clientId) {
+      queries.push(db.collection('rooms').where({
+        status: 'playing',
+        players: _.elemMatch({ clientId })
+      }).get())
+    }
+
+    Promise.all(queries).then(results => {
+      const cloudRooms = []
+      results.forEach(res => {
+        cloudRooms.push(...(res.data || []))
+      })
+      this.setData({ activeRooms: buildActiveRooms(cloudRooms), loading: false })
+    }).catch(err => {
+      console.error('load active rooms failed', err)
+      this.setData({ activeRooms: buildActiveRooms([]), loading: false })
     })
   },
 

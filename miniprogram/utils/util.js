@@ -67,8 +67,22 @@ const hideLoading = () => {
   wx.hideLoading()
 }
 
+const isCloudFileId = path => !!path && path.startsWith('cloud://')
+
+const isHttpUrl = path => /^https?:\/\//i.test(path || '')
+
+const isWxTempFilePath = path => {
+  if (!path) return false
+  return path.startsWith('wxfile://') ||
+    path.startsWith('file://') ||
+    /^https?:\/\/tmp\//i.test(path) ||
+    /^https?:\/\/usr\//i.test(path)
+}
+
 const isLocalFilePath = path => {
-  return !!path && !path.startsWith('cloud://') && !path.startsWith('http://') && !path.startsWith('https://')
+  if (!path || isCloudFileId(path)) return false
+  if (isWxTempFilePath(path)) return true
+  return !isHttpUrl(path)
 }
 
 const ensureCloudAvatar = async (avatarUrl, ownerId = 'user') => {
@@ -98,7 +112,8 @@ const resolveCloudFileUrls = async (urls) => {
 }
 
 const isRenderableImageUrl = url => {
-  return !!url && (url.startsWith('http://') || url.startsWith('https://'))
+  if (!url) return false
+  return isHttpUrl(url) && !isWxTempFilePath(url)
 }
 
 module.exports = {

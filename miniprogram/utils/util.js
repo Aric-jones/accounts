@@ -83,6 +83,19 @@ const ensureCloudAvatar = async (avatarUrl, ownerId = 'user') => {
   return res.fileID || avatarUrl
 }
 
+const resolveCloudFileUrls = async (urls) => {
+  const cloudUrls = [...new Set((urls || []).filter(url => url && url.startsWith('cloud://')))]
+  if (cloudUrls.length === 0) return {}
+  if (!wx.cloud || typeof wx.cloud.getTempFileURL !== 'function') return {}
+
+  const res = await wx.cloud.getTempFileURL({ fileList: cloudUrls })
+  const map = {}
+  ;(res.fileList || []).forEach(item => {
+    if (item.fileID && item.tempFileURL) map[item.fileID] = item.tempFileURL
+  })
+  return map
+}
+
 module.exports = {
   formatTime,
   formatDate,
@@ -90,6 +103,7 @@ module.exports = {
   generateId,
   getClientId,
   ensureCloudAvatar,
+  resolveCloudFileUrls,
   GAME_TYPES,
   getDefaultAvatar,
   showToast,

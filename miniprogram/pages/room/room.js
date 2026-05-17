@@ -1,4 +1,4 @@
-const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureCloudAvatar } = require('../../utils/util')
+const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureCloudAvatar, resolveCloudFileUrls } = require('../../utils/util')
 const { calculateNetScores, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
 const voice = require('../../utils/voice')
@@ -50,6 +50,7 @@ Page({
     applyTheme(this)
     voice.init()
     this.setData({ voiceEnabled: voice.isEnabled() })
+    this.avatarUrlMap = {}
     if (options.id) {
       this.roomId = options.id
       this.loadRoom(options.id)
@@ -96,11 +97,8 @@ Page({
     this.watcher = this._db().collection('rooms').doc(roomId).watch({
       onChange: (snapshot) => {
         if (snapshot.doc) {
-          const localRooms = wx.getStorageSync('localRooms') || []
-          const localRoom = localRooms.find(r => r._id === roomId)
-          const localTime = localRoom && localRoom.updatedAt ? new Date(localRoom.updatedAt).getTime() : 0
-          const cloudTime = snapshot.doc.updatedAt ? new Date(snapshot.doc.updatedAt).getTime() : 0
-          this._updateRoomData(localTime > cloudTime ? localRoom : snapshot.doc)
+          this.cacheRoom(snapshot.doc)
+          this._updateRoomData(snapshot.doc)
         }
       },
       onError: (err) => {
@@ -127,11 +125,8 @@ Page({
       // 写入本地缓存
       const localRooms = wx.getStorageSync('localRooms') || []
       const idx = localRooms.findIndex(r => r._id === roomId)
-      const localRoom = idx >= 0 ? localRooms[idx] : null
       const cloudRoom = res.data
-      const localTime = localRoom && localRoom.updatedAt ? new Date(localRoom.updatedAt).getTime() : 0
-      const cloudTime = cloudRoom.updatedAt ? new Date(cloudRoom.updatedAt).getTime() : 0
-      const room = localTime > cloudTime ? localRoom : cloudRoom
+      const room = cloudRoom
 
       if (idx >= 0) localRooms[idx] = room
       else localRooms.unshift(room)
@@ -146,8 +141,19 @@ Page({
     })
   },
 
+  cacheRoom(room) {
+    if (!room || !room._id) return
+    const localRooms = wx.getStorageSync('localRooms') || []
+    const idx = localRooms.findIndex(r => r._id === room._id)
+    if (idx >= 0) localRooms[idx] = room
+    else localRooms.unshift(room)
+    wx.setStorageSync('localRooms', localRooms)
+  },
+
   _updateRoomData(room) {
     room.transactions = room.transactions || []
+
+    this.resolveRoomAvatarUrls(room)
 
     if (!room.players.find(p => p.id === '__tea__')) {
       room.players.push({ id: '__tea__', nickname: '茶水费', isTea: true })
@@ -169,6 +175,7 @@ Page({
     allPlayers.forEach((p, i) => {
       const enriched = {
         ...p,
+        displayAvatarUrl: this.getDisplayAvatarUrl(p.avatarUrl),
         color: p.avatarColor || getDefaultAvatar(i),
         totalScore: netScores[p.id] || 0
       }
@@ -266,6 +273,29 @@ Page({
     })
 
     wx.setNavigationBarTitle({ title: room.name })
+  },
+
+  getDisplayAvatarUrl(avatarUrl) {
+    if (!avatarUrl) return ''
+    return (this.avatarUrlMap && this.avatarUrlMap[avatarUrl]) || avatarUrl
+  },
+
+  resolveRoomAvatarUrls(room) {
+    const cloudUrls = (room.players || [])
+      .map(player => player.avatarUrl)
+      .filter(url => url && url.startsWith('cloud://') && !(this.avatarUrlMap && this.avatarUrlMap[url]))
+    if (cloudUrls.length === 0) return
+
+    resolveCloudFileUrls(cloudUrls).then(map => {
+      if (!map || Object.keys(map).length === 0) return
+      this.avatarUrlMap = { ...(this.avatarUrlMap || {}), ...map }
+      const currentRoom = this.data.room
+      if (currentRoom && currentRoom._id === room._id) {
+        this._updateRoomData(currentRoom)
+      }
+    }).catch(err => {
+      console.warn('resolve avatar urls failed', err)
+    })
   },
 
   resolveMyPlayerId(realPlayers, roomId) {
@@ -411,7 +441,7 @@ Page({
     if (!player) return
     this.setData({
       showEditProfile: true,
-      editPlayer: player,
+      editPlayer: { ...player, displayAvatarUrl: this.getDisplayAvatarUrl(player.avatarUrl) },
       editName: player.nickname
     })
   },
@@ -426,14 +456,13 @@ Page({
     this.setData({ editName: e.detail.value })
   },
 
-  onPickAvatarColor(e) {
+  async onPickAvatarColor(e) {
     const color = e.currentTarget.dataset.color
     const { editPlayer, room } = this.data
     const p = room.players.find(pl => pl.id === editPlayer.id)
     if (p) p.avatarColor = color
-    this.saveRoom(room)
+    await this.saveRoom(room)
     this.setData({ editPlayer: { ...editPlayer, color, avatarColor: color } })
-    this.loadRoom(room._id)
   },
 
   onChooseAvatar() {
@@ -454,13 +483,12 @@ Page({
         const p = room.players.find(pl => pl.id === editPlayer.id)
         if (p) p.avatarUrl = avatarUrl
         await this.saveRoom(room)
-        this.loadRoom(room._id)
         this.setData({ editPlayer: { ...editPlayer, avatarUrl } })
       }
     })
   },
 
-  onSaveProfile() {
+  async onSaveProfile() {
     const { editName, editPlayer, room } = this.data
     const name = editName.trim()
     if (!name) return showToast('昵称不能为空')
@@ -475,9 +503,8 @@ Page({
         if (t.to === p.id) t.toName = name
       })
     }
-    this.saveRoom(room)
+    await this.saveRoom(room)
     this.setData({ showEditProfile: false, editPlayer: null })
-    this.loadRoom(room._id)
     showToast('已保存')
   },
 
@@ -507,7 +534,7 @@ Page({
     this.setData({ payAmount: val })
   },
 
-  onConfirmPay() {
+  async onConfirmPay() {
     const { payTarget, payFrom, payAmount, room, teaFeePercent, teaCollectMode } = this.data
     const amount = Math.min(parseInt(payAmount) || 0, 99999)
     if (!amount || amount <= 0) return showToast('请输入有效分数')
@@ -545,10 +572,9 @@ Page({
     }
 
     room.updatedAt = now
-    this.saveRoom(room)
+    await this.saveRoom(room)
     this.setData({ showPayDialog: false, payTarget: null, payFrom: null, payAmount: '' })
     wx.vibrateShort({ type: 'medium' })
-    this.loadRoom(room._id)
 
     if (amount >= 50) {
       voice.onBigPayment(payFrom.nickname, payTarget.nickname, amount)
@@ -580,7 +606,7 @@ Page({
     this.setData({ teaCollectMode: e.currentTarget.dataset.mode })
   },
 
-  onSaveTeaSetting() {
+  async onSaveTeaSetting() {
     const { room, teaFeePercent, teaCollectMode } = this.data
     const oldMode = room.teaCollectMode || 'immediate'
     const oldPercent = room.teaFeePercent || 0
@@ -617,13 +643,12 @@ Page({
     room.teaCollectMode = teaCollectMode
     room.lastTeaCollectIdx = room.transactions.length
 
-    this.saveRoom(room)
+    await this.saveRoom(room)
     this.setData({ showTeaPanel: false })
-    this.loadRoom(room._id)
     showToast(teaFeePercent > 0 ? '茶水费' + teaFeePercent + '%（' + (teaCollectMode === 'immediate' ? '立即' : '手动') + '）' : '已关闭茶水费')
   },
 
-  onCollectTeaFee() {
+  async onCollectTeaFee() {
     const { room, teaFeePercent } = this.data
     if (!teaFeePercent || teaFeePercent <= 0) return showToast('请先设置茶水费比例')
 
@@ -666,8 +691,7 @@ Page({
 
     room.lastTeaCollectIdx = room.transactions.length
     room.updatedAt = new Date().toISOString()
-    this.saveRoom(room)
-    this.loadRoom(room._id)
+    await this.saveRoom(room)
     wx.vibrateShort({ type: 'heavy' })
     showToast('收取' + totalCollected + '分茶水费')
   },
@@ -704,7 +728,7 @@ Page({
     this.setData({ tableAmount: val })
   },
 
-  onConfirmTable() {
+  async onConfirmTable() {
     const { tableDirection, tableFrom, tableAmount, room, tableBalance } = this.data
     const amount = Math.min(parseInt(tableAmount) || 0, 99999)
     if (!amount || amount <= 0) return showToast('请输入有效分数')
@@ -742,10 +766,9 @@ Page({
     }
 
     room.updatedAt = now
-    this.saveRoom(room)
+    await this.saveRoom(room)
     this.setData({ showTableDialog: false, tableAmount: '' })
     wx.vibrateShort({ type: 'medium' })
-    this.loadRoom(room._id)
     const actionText = tableDirection === 'pay' ? '放入台面' : '从台面获取'
     showToast(tableFrom.nickname + ' ' + actionText + ' ' + amount + '分')
   },
@@ -1056,12 +1079,15 @@ Page({
     wx.showModal({
       title: '撤销',
       content: '撤销 ' + desc + '？',
-      success: (res) => {
+      success: async (res) => {
         if (!res.confirm) return
+        const deletedTransactionIds = txns
+          .slice(undoRange.start, undoRange.end + 1)
+          .map(tx => tx.id || [tx.timestamp || '', tx.from || '', tx.to || '', tx.amount || 0].join('|'))
+          .filter(Boolean)
         room.transactions.splice(undoRange.start, undoRange.end - undoRange.start + 1)
         room.updatedAt = new Date().toISOString()
-        this.saveRoom(room)
-        this.loadRoom(room._id)
+        await this.saveRoom(room, { deletedTransactionIds })
         showToast('已撤销')
       }
     })
@@ -1127,7 +1153,7 @@ Page({
 
   // === Persistence ===
 
-  saveRoom(room) {
+  saveRoom(room, options = {}) {
     // 写本地缓存（支持离线）
     const localRooms = wx.getStorageSync('localRooms') || []
     const idx = localRooms.findIndex(r => r._id === room._id)
@@ -1141,6 +1167,7 @@ Page({
       data: {
         action: 'saveRoom',
         roomId: room._id,
+        deletedTransactionIds: options.deletedTransactionIds || [],
         room: {
           players: room.players,
           transactions: room.transactions,
@@ -1153,6 +1180,13 @@ Page({
           updatedAt: room.updatedAt
         }
       }
+    }).then(res => {
+      if (res.result && res.result.code === 0 && res.result.data) {
+        const mergedRoom = res.result.data
+        this.cacheRoom(mergedRoom)
+        this._updateRoomData(mergedRoom)
+      }
+      return res
     }).catch(err => {
       console.error('保存房间失败', err)
       showToast('云端保存失败，已保存在本机')

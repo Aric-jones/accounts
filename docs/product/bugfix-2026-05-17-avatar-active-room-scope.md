@@ -64,6 +64,8 @@ L2：涉及共享头像工具、房间参与者识别、首页跨页面展示范
 - 若上传失败，页面允许当前设备短暂预览本机临时图，但不能把失败状态误报为跨设备头像已生效。
 - 排查日志已确认上传、`recordScore.saveRoom` 写入、`getTempFileURL` 解析均成功；实际阻断点是调试日志误写到 `cacheRoom()`，引用了不存在的 `options` 变量，导致保存成功后的缓存刷新抛 `ReferenceError`。
 - `saveRoom:start` 日志应只位于 `saveRoom(room, options)` 内；`cacheRoom(room)` 只能做本地缓存写入，不引用保存参数。
+- 已加入房间后，用户在个人资料页或其他入口更换头像，不会天然更新既有 `room.players` 快照；进入房间时必须把当前用户本地 `userInfo.nickName/avatarUrl` 同步到该房间的当前玩家资料。
+- 房间页 `_updateRoomData` 需输出每个真实玩家的 `avatarUrl/displayAvatarUrl/hasDisplayAvatar`，用于判断对方头像是“未写入房间”“未解析临时 URL”还是“已解析但渲染失败”。
 
 ## 验证记录
 

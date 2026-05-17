@@ -182,10 +182,11 @@ Page({
     let teaPlayer = null
     let tablePlayer = null
     allPlayers.forEach((p, i) => {
+      const displayAvatarUrl = this.getDisplayAvatarUrl(p.avatarUrl)
       const enriched = {
         ...p,
-        displayAvatarUrl: this.getDisplayAvatarUrl(p.avatarUrl),
-        hasDisplayAvatar: shouldRenderAvatar(p.avatarUrl, this.getDisplayAvatarUrl(p.avatarUrl)),
+        displayAvatarUrl,
+        hasDisplayAvatar: shouldRenderAvatar(p.avatarUrl, displayAvatarUrl),
         color: p.avatarColor || getDefaultAvatar(i),
         totalScore: netScores[p.id] || 0
       }
@@ -194,6 +195,16 @@ Page({
       else realPlayers.push(enriched)
     })
     const tableBalance = tablePlayer ? tablePlayer.totalScore : 0
+    console.log('[avatar][room] updateRoomData:players', {
+      roomId: room._id,
+      players: realPlayers.map(p => ({
+        id: p.id,
+        nickname: p.nickname,
+        avatarUrl: p.avatarUrl,
+        displayAvatarUrl: p.displayAvatarUrl,
+        hasDisplayAvatar: p.hasDisplayAvatar
+      }))
+    })
 
     room.players = allPlayers
     const teaFeePercent = room.teaFeePercent || 0
@@ -219,7 +230,7 @@ Page({
     }
 
     const myPlayerId = this.resolveMyPlayerId(realPlayers, room._id)
-    this.repairMyLocalAvatar(room, myPlayerId)
+    this.syncMyProfileToRoom(room, myPlayerId)
     const displayTxns = this.buildDisplayTxns(room.transactions, this.data.showAllTxns)
 
     const allChipPlayers = []
@@ -302,6 +313,81 @@ Page({
       return false
     }
     return true
+  },
+
+  async syncMyProfileToRoom(room, myPlayerId) {
+    if (this._syncingProfile || !room || !myPlayerId || room.status === 'settled') return
+    const player = (room.players || []).find(p => p.id === myPlayerId)
+    if (!player) return
+
+    const userInfo = wx.getStorageSync('userInfo') || {}
+    const localAvatarUrl = userInfo.avatarUrl || ''
+    const localNickName = userInfo.nickName || ''
+    const before = {
+      nickname: player.nickname || '',
+      avatarUrl: player.avatarUrl || ''
+    }
+    console.log('[avatar][room] syncMyProfileToRoom:start', {
+      roomId: room._id,
+      myPlayerId,
+      player: before,
+      userInfo: {
+        nickName: localNickName,
+        avatarUrl: localAvatarUrl
+      }
+    })
+
+    this._syncingProfile = true
+    try {
+      let nextAvatarUrl = player.avatarUrl || ''
+      if (localAvatarUrl && localAvatarUrl !== player.avatarUrl) {
+        nextAvatarUrl = await ensureCloudAvatar(localAvatarUrl, player.id || getClientId())
+      } else if (player.avatarUrl) {
+        nextAvatarUrl = await ensureCloudAvatar(player.avatarUrl, player.id || getClientId())
+      }
+
+      let changed = false
+      if (localNickName && localNickName !== player.nickname) {
+        player.nickname = localNickName
+        changed = true
+      }
+      if (nextAvatarUrl && nextAvatarUrl !== player.avatarUrl) {
+        player.avatarUrl = nextAvatarUrl
+        changed = true
+      }
+
+      if (!changed) {
+        console.log('[avatar][room] syncMyProfileToRoom:no-change', {
+          roomId: room._id,
+          myPlayerId,
+          player: {
+            nickname: player.nickname,
+            avatarUrl: player.avatarUrl
+          }
+        })
+        return
+      }
+
+      console.log('[avatar][room] syncMyProfileToRoom:save', {
+        roomId: room._id,
+        myPlayerId,
+        before,
+        after: {
+          nickname: player.nickname,
+          avatarUrl: player.avatarUrl
+        }
+      })
+      await this.saveRoom(room, { updateFields: ['players'] })
+    } catch (err) {
+      console.warn('sync profile to room failed', err)
+      console.log('[avatar][room] syncMyProfileToRoom:fail', {
+        roomId: room._id,
+        myPlayerId,
+        err
+      })
+    } finally {
+      this._syncingProfile = false
+    }
   },
 
   async repairMyLocalAvatar(room, myPlayerId) {

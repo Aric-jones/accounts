@@ -135,11 +135,6 @@ Page({
       this._updateRoomData(room)
       this.startWatcher(roomId)
     }).catch(err => {
-      console.log('[avatar][room] saveRoom:fail', {
-        roomId: room._id,
-        updateFields: options.updateFields || null,
-        err
-      })
       console.error('加载房间失败', err)
       showToast('加载房间失败')
       setTimeout(() => wx.navigateBack(), 1000)
@@ -161,16 +156,6 @@ Page({
     if (idx >= 0) localRooms[idx] = room
     else localRooms.unshift(room)
     wx.setStorageSync('localRooms', localRooms)
-
-    console.log('[avatar][room] saveRoom:start', {
-      roomId: room._id,
-      updateFields: options.updateFields || null,
-      players: (room.players || []).map(p => ({
-        id: p.id,
-        nickname: p.nickname,
-        avatarUrl: p.avatarUrl
-      }))
-    })
   },
 
   _updateRoomData(room) {
@@ -1356,6 +1341,16 @@ Page({
     if (idx >= 0) localRooms[idx] = room
     else localRooms.unshift(room)
     wx.setStorageSync('localRooms', localRooms)
+
+    console.log('[avatar][room] saveRoom:start', {
+      roomId: room._id,
+      updateFields: options.updateFields || null,
+      players: (room.players || []).map(p => ({
+        id: p.id,
+        nickname: p.nickname,
+        avatarUrl: p.avatarUrl
+      }))
+    })
 
     // 通过云函数写云端，避免参与者受数据库权限限制。
     return wx.cloud.callFunction({

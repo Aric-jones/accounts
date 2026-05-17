@@ -92,6 +92,7 @@ const resolveCloudFileUrls = async (urls) => {
   const map = {}
   ;(res.fileList || []).forEach(item => {
     if (item.fileID && item.tempFileURL) map[item.fileID] = item.tempFileURL
+    else if (item.fileID) console.warn('resolve cloud file url failed', item.fileID, item.status, item.errMsg)
   })
   return map
 }

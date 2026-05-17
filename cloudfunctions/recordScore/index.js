@@ -4,7 +4,7 @@ const db = cloud.database()
 const _ = db.command
 
 exports.main = async (event, context) => {
-  const { roomId, roundScores, action, room = {}, deletedTransactionIds = [] } = event
+  const { roomId, roundScores, action, room = {}, deletedTransactionIds = [], updateFields = null } = event
 
   try {
     if (action === 'saveRoom') {
@@ -18,19 +18,22 @@ exports.main = async (event, context) => {
         return key && !currentKeys.has(key)
       })
       const updateData = {
-        players: mergedRoom.players,
-        teaFeePercent: mergedRoom.teaFeePercent,
-        teaCollectMode: mergedRoom.teaCollectMode,
-        lastTeaCollectIdx: mergedRoom.lastTeaCollectIdx,
-        status: mergedRoom.status,
-        winner: mergedRoom.winner,
-        settledAt: mergedRoom.settledAt,
         updatedAt: mergedRoom.updatedAt
       }
+      const fields = Array.isArray(updateFields) ? new Set(updateFields) : null
+      const canUpdate = field => !fields || fields.has(field)
 
-      if (deleted) {
+      if (canUpdate('players')) updateData.players = mergedRoom.players
+      if (canUpdate('teaFeePercent')) updateData.teaFeePercent = mergedRoom.teaFeePercent
+      if (canUpdate('teaCollectMode')) updateData.teaCollectMode = mergedRoom.teaCollectMode
+      if (canUpdate('lastTeaCollectIdx')) updateData.lastTeaCollectIdx = mergedRoom.lastTeaCollectIdx
+      if (canUpdate('status')) updateData.status = mergedRoom.status
+      if (canUpdate('winner')) updateData.winner = mergedRoom.winner
+      if (canUpdate('settledAt')) updateData.settledAt = mergedRoom.settledAt
+
+      if (canUpdate('transactions') && deleted) {
         updateData.transactions = mergedRoom.transactions
-      } else if (newTransactions.length > 0) {
+      } else if (canUpdate('transactions') && newTransactions.length > 0) {
         updateData.transactions = _.push({ each: newTransactions })
       }
 

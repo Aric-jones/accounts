@@ -141,6 +141,14 @@ Page({
     })
   },
 
+  async fetchLatestRoom(roomId) {
+    const res = await this._db().collection('rooms').doc(roomId).get()
+    if (!res.data) throw new Error('room not found')
+    this.cacheRoom(res.data)
+    this._updateRoomData(res.data)
+    return res.data
+  },
+
   cacheRoom(room) {
     if (!room || !room._id) return
     const localRooms = wx.getStorageSync('localRooms') || []
@@ -461,7 +469,7 @@ Page({
     const { editPlayer, room } = this.data
     const p = room.players.find(pl => pl.id === editPlayer.id)
     if (p) p.avatarColor = color
-    await this.saveRoom(room)
+    await this.saveRoom(room, { updateFields: ['players'] })
     this.setData({ editPlayer: { ...editPlayer, color, avatarColor: color } })
   },
 
@@ -482,7 +490,7 @@ Page({
         }
         const p = room.players.find(pl => pl.id === editPlayer.id)
         if (p) p.avatarUrl = avatarUrl
-        await this.saveRoom(room)
+        await this.saveRoom(room, { updateFields: ['players'] })
         this.setData({ editPlayer: { ...editPlayer, avatarUrl } })
       }
     })
@@ -503,7 +511,7 @@ Page({
         if (t.to === p.id) t.toName = name
       })
     }
-    await this.saveRoom(room)
+    await this.saveRoom(room, { updateFields: ['players', 'transactions'] })
     this.setData({ showEditProfile: false, editPlayer: null })
     showToast('已保存')
   },
@@ -535,7 +543,7 @@ Page({
   },
 
   async onConfirmPay() {
-    const { payTarget, payFrom, payAmount, room, teaFeePercent, teaCollectMode } = this.data
+    const { payTarget, payFrom, payAmount } = this.data
     const amount = Math.min(parseInt(payAmount) || 0, 99999)
     if (!amount || amount <= 0) return showToast('请输入有效分数')
     if (!payTarget || !payFrom) return showToast('请选择付款人')
@@ -543,17 +551,27 @@ Page({
 
     if (payFrom.id !== this.data.myPlayerId) return showToast('只能用自己的身份支付')
 
+    let room = this.data.room
+    try {
+      room = await this.fetchLatestRoom(room._id)
+    } catch (err) {
+      console.warn('fetch latest room before pay failed', err)
+    }
+    const latestPayFrom = (room.players || []).find(p => p.id === payFrom.id) || payFrom
+    const latestPayTarget = (room.players || []).find(p => p.id === payTarget.id) || payTarget
+    const teaFeePercent = room.teaFeePercent || 0
+    const teaCollectMode = room.teaCollectMode || 'immediate'
     const now = new Date().toISOString()
     const opId = generateId()
     room.transactions = room.transactions || []
 
     room.transactions.push({
       id: generateId(),
-      operatorId: payFrom.id,
+      operatorId: latestPayFrom.id,
       operationId: opId,
       operationType: 'pay',
-      from: payFrom.id, to: payTarget.id, amount,
-      fromName: payFrom.nickname, toName: payTarget.nickname,
+      from: latestPayFrom.id, to: latestPayTarget.id, amount,
+      fromName: latestPayFrom.nickname, toName: latestPayTarget.nickname,
       timestamp: now
     })
 
@@ -562,29 +580,29 @@ Page({
     if (teaFee > 0) {
       room.transactions.push({
         id: generateId(),
-        operatorId: payFrom.id,
+        operatorId: latestPayFrom.id,
         operationId: opId,
         operationType: 'autoTea',
-        from: payTarget.id, to: '__tea__', amount: teaFee,
-        fromName: payTarget.nickname, toName: '茶水费',
+        from: latestPayTarget.id, to: '__tea__', amount: teaFee,
+        fromName: latestPayTarget.nickname, toName: '茶水费',
         timestamp: now
       })
     }
 
     room.updatedAt = now
-    await this.saveRoom(room)
+    await this.saveRoom(room, { updateFields: ['transactions'] })
     this.setData({ showPayDialog: false, payTarget: null, payFrom: null, payAmount: '' })
     wx.vibrateShort({ type: 'medium' })
 
     if (amount >= 50) {
-      voice.onBigPayment(payFrom.nickname, payTarget.nickname, amount)
+      voice.onBigPayment(latestPayFrom.nickname, latestPayTarget.nickname, amount)
     }
     const allPlayers = room.players.filter(p => p.id !== '__tea__' && p.id !== '__table__')
     const netScores = calculateNetScores(room.transactions, room.players)
     allPlayers.forEach(p => {
       const s = netScores[p.id] || 0
-      if (s >= 100 && p.id === payTarget.id) voice.onBigWinner(p.nickname, s)
-      if (s <= -100 && p.id === payFrom.id) voice.onBigLoser(p.nickname, s)
+      if (s >= 100 && p.id === latestPayTarget.id) voice.onBigWinner(p.nickname, s)
+      if (s <= -100 && p.id === latestPayFrom.id) voice.onBigLoser(p.nickname, s)
     })
   },
 
@@ -643,7 +661,9 @@ Page({
     room.teaCollectMode = teaCollectMode
     room.lastTeaCollectIdx = room.transactions.length
 
-    await this.saveRoom(room)
+    await this.saveRoom(room, {
+      updateFields: ['transactions', 'teaFeePercent', 'teaCollectMode', 'lastTeaCollectIdx']
+    })
     this.setData({ showTeaPanel: false })
     showToast(teaFeePercent > 0 ? '茶水费' + teaFeePercent + '%（' + (teaCollectMode === 'immediate' ? '立即' : '手动') + '）' : '已关闭茶水费')
   },
@@ -691,7 +711,7 @@ Page({
 
     room.lastTeaCollectIdx = room.transactions.length
     room.updatedAt = new Date().toISOString()
-    await this.saveRoom(room)
+    await this.saveRoom(room, { updateFields: ['transactions', 'lastTeaCollectIdx'] })
     wx.vibrateShort({ type: 'heavy' })
     showToast('收取' + totalCollected + '分茶水费')
   },
@@ -766,7 +786,7 @@ Page({
     }
 
     room.updatedAt = now
-    await this.saveRoom(room)
+    await this.saveRoom(room, { updateFields: ['transactions'] })
     this.setData({ showTableDialog: false, tableAmount: '' })
     wx.vibrateShort({ type: 'medium' })
     const actionText = tableDirection === 'pay' ? '放入台面' : '从台面获取'
@@ -1087,7 +1107,7 @@ Page({
           .filter(Boolean)
         room.transactions.splice(undoRange.start, undoRange.end - undoRange.start + 1)
         room.updatedAt = new Date().toISOString()
-        await this.saveRoom(room, { deletedTransactionIds })
+        await this.saveRoom(room, { deletedTransactionIds, updateFields: ['transactions'] })
         showToast('已撤销')
       }
     })
@@ -1145,7 +1165,7 @@ Page({
         room.settledAt = new Date().toISOString()
         room.updatedAt = new Date().toISOString()
         this.setData({ room })
-        await this.saveRoom(room)
+        await this.saveRoom(room, { updateFields: ['status', 'winner', 'settledAt'] })
         wx.redirectTo({ url: '/pages/settlement/settlement?id=' + room._id })
       }
     })
@@ -1168,6 +1188,7 @@ Page({
         action: 'saveRoom',
         roomId: room._id,
         deletedTransactionIds: options.deletedTransactionIds || [],
+        updateFields: options.updateFields || null,
         room: {
           players: room.players,
           transactions: room.transactions,

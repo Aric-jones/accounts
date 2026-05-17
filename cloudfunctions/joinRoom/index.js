@@ -26,6 +26,8 @@ exports.main = async (event, context) => {
       currentPlayer = players.find(p => p.clientId === player.clientId)
     }
 
+    let shouldUpdatePlayers = false
+
     if (!currentPlayer) {
       currentPlayer = {
         id: player.id || `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 9)}`,
@@ -36,6 +38,27 @@ exports.main = async (event, context) => {
         isCreator: false
       }
       players.push(currentPlayer)
+      shouldUpdatePlayers = true
+    } else {
+      if (player.nickname && currentPlayer.nickname !== player.nickname) {
+        currentPlayer.nickname = player.nickname
+        shouldUpdatePlayers = true
+      }
+      if (player.avatarUrl && currentPlayer.avatarUrl !== player.avatarUrl) {
+        currentPlayer.avatarUrl = player.avatarUrl
+        shouldUpdatePlayers = true
+      }
+      if (player.clientId && currentPlayer.clientId !== player.clientId) {
+        currentPlayer.clientId = player.clientId
+        shouldUpdatePlayers = true
+      }
+      if ((wxContext.OPENID || player.openid) && currentPlayer.openid !== (wxContext.OPENID || player.openid)) {
+        currentPlayer.openid = wxContext.OPENID || player.openid
+        shouldUpdatePlayers = true
+      }
+    }
+
+    if (shouldUpdatePlayers) {
       await db.collection('rooms').doc(room._id).update({
         data: {
           players,

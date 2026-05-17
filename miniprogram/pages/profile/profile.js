@@ -100,6 +100,7 @@ Page({
 
   async onChooseAvatar(e) {
     const { avatarUrl } = e.detail
+    console.log('[avatar][profile] chooseAvatar:selected', { avatarUrl })
     const userInfo = { ...this.data.userInfo, avatarUrl }
     this.setData({ userInfo })
     wx.setStorageSync('userInfo', userInfo)
@@ -107,6 +108,11 @@ Page({
     try {
       showLoading('上传头像...')
       const cloudAvatar = await ensureCloudAvatar(avatarUrl, wx.getStorageSync('clientId') || 'profile')
+      console.log('[avatar][profile] chooseAvatar:upload-result', {
+        inputAvatarUrl: avatarUrl,
+        savedAvatarUrl: cloudAvatar,
+        uploadSucceeded: cloudAvatar !== avatarUrl
+      })
       const nextUserInfo = { ...userInfo, avatarUrl: cloudAvatar }
       this.setData({ userInfo: nextUserInfo })
       wx.setStorageSync('userInfo', nextUserInfo)
@@ -117,6 +123,7 @@ Page({
     } catch (err) {
       hideLoading()
       console.warn('upload avatar failed', err)
+      console.log('[avatar][profile] chooseAvatar:upload-fail', { avatarUrl, err })
       showToast('头像已更新，云端上传失败')
       return
     }

@@ -62,9 +62,17 @@ Page({
     const clientId = getClientId()
     const openid = app.globalData.openid || ''
     let avatarUrl = userInfo.avatarUrl || ''
+    console.log('[avatar][create] before-upload', { clientId, openid, avatarUrl, userInfo })
 
     try {
       avatarUrl = await ensureCloudAvatar(avatarUrl, clientId)
+      console.log('[avatar][create] upload-result', {
+        clientId,
+        openid,
+        inputAvatarUrl: userInfo.avatarUrl || '',
+        savedAvatarUrl: avatarUrl,
+        uploadSucceeded: avatarUrl !== (userInfo.avatarUrl || '')
+      })
       if (avatarUrl !== userInfo.avatarUrl) {
         const nextUserInfo = { ...userInfo, avatarUrl }
         wx.setStorageSync('userInfo', nextUserInfo)
@@ -72,6 +80,7 @@ Page({
       }
     } catch (err) {
       console.warn('upload avatar failed', err)
+      console.log('[avatar][create] upload-fail', { clientId, openid, avatarUrl, err })
     }
 
     // Only the creator is in the room initially
@@ -83,6 +92,11 @@ Page({
       openid,
       isCreator: true
     }
+    console.log('[avatar][create] creator-avatar', {
+      roomName,
+      playerId: creator.id,
+      avatarUrl: creator.avatarUrl
+    })
 
     const roomData = {
       _id: generateId(),

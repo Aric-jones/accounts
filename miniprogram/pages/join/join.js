@@ -64,8 +64,22 @@ Page({
       const userInfo = wx.getStorageSync('userInfo') || {}
       const clientId = getClientId()
       let avatarUrl = userInfo.avatarUrl || ''
+      console.log('[avatar][join] before-upload', {
+        shareCode,
+        clientId,
+        openid: app.globalData.openid || '',
+        avatarUrl,
+        userInfo
+      })
       try {
         avatarUrl = await ensureCloudAvatar(avatarUrl, clientId)
+        console.log('[avatar][join] upload-result', {
+          shareCode,
+          clientId,
+          inputAvatarUrl: userInfo.avatarUrl || '',
+          savedAvatarUrl: avatarUrl,
+          uploadSucceeded: avatarUrl !== (userInfo.avatarUrl || '')
+        })
         if (avatarUrl !== userInfo.avatarUrl) {
           const nextUserInfo = { ...userInfo, avatarUrl }
           wx.setStorageSync('userInfo', nextUserInfo)
@@ -73,6 +87,7 @@ Page({
         }
       } catch (err) {
         console.warn('upload avatar failed', err)
+        console.log('[avatar][join] upload-fail', { shareCode, clientId, avatarUrl, err })
       }
       const player = {
         id: generateId(),
@@ -81,6 +96,12 @@ Page({
         clientId,
         openid: app.globalData.openid || ''
       }
+      console.log('[avatar][join] player-avatar', {
+        shareCode,
+        playerId: player.id,
+        avatarUrl: player.avatarUrl,
+        nickname: player.nickname
+      })
       const res = await wx.cloud.callFunction({
         name: 'joinRoom',
         data: { shareCode, player }

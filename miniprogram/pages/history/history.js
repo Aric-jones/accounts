@@ -1,4 +1,4 @@
-const { GAME_TYPES, formatTime, getDefaultAvatar, resolveCloudFileUrls, isRenderableImageUrl } = require('../../utils/util')
+const { GAME_TYPES, formatTime, getDefaultAvatar, resolveCloudFileUrls, shouldRenderAvatar } = require('../../utils/util')
 const { calculateNetScores, generateRankings, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
 
@@ -78,12 +78,15 @@ Page({
 
   formatHistoryRoom(room) {
     const gameInfo = GAME_TYPES[room.gameType] || GAME_TYPES.poker
-    const allPlayers = (room.players || []).map((p, i) => ({
-      ...p,
-      displayAvatarUrl: this.getDisplayAvatarUrl(p.avatarUrl),
-      hasDisplayAvatar: isRenderableImageUrl(this.getDisplayAvatarUrl(p.avatarUrl)),
-      color: p.avatarColor || getDefaultAvatar(i)
-    }))
+    const allPlayers = (room.players || []).map((p, i) => {
+      const displayAvatarUrl = this.getDisplayAvatarUrl(p.avatarUrl)
+      return {
+        ...p,
+        displayAvatarUrl,
+        hasDisplayAvatar: shouldRenderAvatar(p.avatarUrl, displayAvatarUrl),
+        color: p.avatarColor || getDefaultAvatar(i)
+      }
+    })
     const players = allPlayers.filter(p => p.id !== '__tea__' && p.id !== '__table__')
     const scoreData = room.transactions || room.rounds || []
     const netScores = calculateNetScores(scoreData, allPlayers)

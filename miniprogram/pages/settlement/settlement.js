@@ -1,4 +1,4 @@
-const { GAME_TYPES, getDefaultAvatar, showToast, resolveCloudFileUrls, isRenderableImageUrl } = require('../../utils/util')
+const { GAME_TYPES, getDefaultAvatar, showToast, resolveCloudFileUrls, shouldRenderAvatar } = require('../../utils/util')
 const { calculateNetScores, calculateOptimalTransfers, generateRankings, findWinner, calculateStats } = require('../../utils/settlement')
 const { generateLocalSummary, generateAISummary, generatePlayerComment } = require('../../utils/ai')
 const { applyTheme } = require('../../utils/theme')
@@ -40,12 +40,15 @@ Page({
         return
       }
 
-      const allPlayers = room.players.map((p, i) => ({
-        ...p,
-        displayAvatarUrl: this.getDisplayAvatarUrl(p.avatarUrl),
-        hasDisplayAvatar: isRenderableImageUrl(this.getDisplayAvatarUrl(p.avatarUrl)),
-        color: getDefaultAvatar(i)
-      }))
+      const allPlayers = room.players.map((p, i) => {
+        const displayAvatarUrl = this.getDisplayAvatarUrl(p.avatarUrl)
+        return {
+          ...p,
+          displayAvatarUrl,
+          hasDisplayAvatar: shouldRenderAvatar(p.avatarUrl, displayAvatarUrl),
+          color: getDefaultAvatar(i)
+        }
+      })
       const players = allPlayers.filter(p => p.id !== '__tea__' && p.id !== '__table__')
 
       const scoreData = room.transactions || room.rounds || []

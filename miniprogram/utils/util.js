@@ -67,6 +67,10 @@ const hideLoading = () => {
   wx.hideLoading()
 }
 
+const logAvatar = (stage, detail = {}) => {
+  console.log('[avatar]', stage, detail)
+}
+
 const isCloudFileId = path => !!path && path.startsWith('cloud://')
 
 const isHttpUrl = path => /^https?:\/\//i.test(path || '')
@@ -86,34 +90,101 @@ const isLocalFilePath = path => {
 }
 
 const ensureCloudAvatar = async (avatarUrl, ownerId = 'user') => {
-  if (!isLocalFilePath(avatarUrl)) return avatarUrl || ''
-  if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') return avatarUrl
+  const shouldUpload = isLocalFilePath(avatarUrl)
+  logAvatar('ensureCloudAvatar:start', {
+    avatarUrl,
+    ownerId,
+    shouldUpload,
+    isCloudFileId: isCloudFileId(avatarUrl),
+    isHttpUrl: isHttpUrl(avatarUrl),
+    isWxTempFilePath: isWxTempFilePath(avatarUrl),
+    hasCloudUpload: !!(wx.cloud && typeof wx.cloud.uploadFile === 'function')
+  })
+
+  if (!shouldUpload) {
+    logAvatar('ensureCloudAvatar:skip', { reason: 'not-local-file-path', avatarUrl })
+    return avatarUrl || ''
+  }
+  if (!wx.cloud || typeof wx.cloud.uploadFile !== 'function') {
+    logAvatar('ensureCloudAvatar:skip', { reason: 'wx.cloud.uploadFile-unavailable', avatarUrl })
+    return avatarUrl
+  }
 
   const extMatch = avatarUrl.match(/\.(jpg|jpeg|png|webp|gif)(?:\?|$)/i)
   const ext = extMatch ? extMatch[1].toLowerCase() : 'jpg'
   const safeOwner = String(ownerId || 'user').replace(/[^a-zA-Z0-9_-]/g, '')
   const cloudPath = `avatars/${safeOwner || 'user'}-${Date.now()}.${ext}`
-  const res = await wx.cloud.uploadFile({ cloudPath, filePath: avatarUrl })
-  return res.fileID || avatarUrl
+  logAvatar('ensureCloudAvatar:upload', { cloudPath, filePath: avatarUrl })
+  try {
+    const res = await wx.cloud.uploadFile({ cloudPath, filePath: avatarUrl })
+    logAvatar('ensureCloudAvatar:success', { cloudPath, fileID: res.fileID, raw: res })
+    return res.fileID || avatarUrl
+  } catch (err) {
+    logAvatar('ensureCloudAvatar:fail', { cloudPath, filePath: avatarUrl, err })
+    throw err
+  }
 }
 
 const resolveCloudFileUrls = async (urls) => {
   const cloudUrls = [...new Set((urls || []).filter(url => url && url.startsWith('cloud://')))]
-  if (cloudUrls.length === 0) return {}
-  if (!wx.cloud || typeof wx.cloud.getTempFileURL !== 'function') return {}
-
-  const res = await wx.cloud.getTempFileURL({ fileList: cloudUrls })
-  const map = {}
-  ;(res.fileList || []).forEach(item => {
-    if (item.fileID && item.tempFileURL) map[item.fileID] = item.tempFileURL
-    else if (item.fileID) console.warn('resolve cloud file url failed', item.fileID, item.status, item.errMsg)
+  logAvatar('resolveCloudFileUrls:start', {
+    inputCount: (urls || []).length,
+    cloudUrls,
+    hasGetTempFileURL: !!(wx.cloud && typeof wx.cloud.getTempFileURL === 'function')
   })
-  return map
+  if (cloudUrls.length === 0) return {}
+  if (!wx.cloud || typeof wx.cloud.getTempFileURL !== 'function') {
+    logAvatar('resolveCloudFileUrls:skip', { reason: 'wx.cloud.getTempFileURL-unavailable' })
+    return {}
+  }
+
+  try {
+    const res = await wx.cloud.getTempFileURL({ fileList: cloudUrls })
+    const map = {}
+    ;(res.fileList || []).forEach(item => {
+      if (item.fileID && item.tempFileURL) {
+        map[item.fileID] = item.tempFileURL
+        logAvatar('resolveCloudFileUrls:item-success', {
+          fileID: item.fileID,
+          tempFileURL: item.tempFileURL,
+          status: item.status
+        })
+      } else if (item.fileID) {
+        console.warn('resolve cloud file url failed', item.fileID, item.status, item.errMsg)
+        logAvatar('resolveCloudFileUrls:item-fail', {
+          fileID: item.fileID,
+          status: item.status,
+          errMsg: item.errMsg
+        })
+      }
+    })
+    logAvatar('resolveCloudFileUrls:done', { resolvedCount: Object.keys(map).length, raw: res })
+    return map
+  } catch (err) {
+    logAvatar('resolveCloudFileUrls:fail', { cloudUrls, err })
+    throw err
+  }
 }
 
 const isRenderableImageUrl = url => {
   if (!url) return false
-  return isHttpUrl(url) && !isWxTempFilePath(url)
+  return isHttpUrl(url)
+}
+
+const isPreviewableImageUrl = url => {
+  if (!url) return false
+  return isWxTempFilePath(url) || isRenderableImageUrl(url)
+}
+
+const hasResolvedCloudAvatar = (avatarUrl, displayAvatarUrl) => {
+  return isCloudFileId(avatarUrl) && !!displayAvatarUrl && displayAvatarUrl !== avatarUrl
+}
+
+const shouldRenderAvatar = (avatarUrl, displayAvatarUrl, allowLocalPreview = false) => {
+  if (!displayAvatarUrl) return false
+  if (hasResolvedCloudAvatar(avatarUrl, displayAvatarUrl)) return isPreviewableImageUrl(displayAvatarUrl)
+  if (isWxTempFilePath(avatarUrl)) return allowLocalPreview && isPreviewableImageUrl(displayAvatarUrl)
+  return isRenderableImageUrl(displayAvatarUrl)
 }
 
 module.exports = {
@@ -125,6 +196,8 @@ module.exports = {
   ensureCloudAvatar,
   resolveCloudFileUrls,
   isRenderableImageUrl,
+  isPreviewableImageUrl,
+  shouldRenderAvatar,
   GAME_TYPES,
   getDefaultAvatar,
   showToast,

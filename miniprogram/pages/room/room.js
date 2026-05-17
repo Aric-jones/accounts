@@ -1,4 +1,4 @@
-const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureCloudAvatar, resolveCloudFileUrls, isRenderableImageUrl } = require('../../utils/util')
+const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureCloudAvatar, resolveCloudFileUrls, shouldRenderAvatar } = require('../../utils/util')
 const { calculateNetScores, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
 const voice = require('../../utils/voice')
@@ -135,6 +135,11 @@ Page({
       this._updateRoomData(room)
       this.startWatcher(roomId)
     }).catch(err => {
+      console.log('[avatar][room] saveRoom:fail', {
+        roomId: room._id,
+        updateFields: options.updateFields || null,
+        err
+      })
       console.error('加载房间失败', err)
       showToast('加载房间失败')
       setTimeout(() => wx.navigateBack(), 1000)
@@ -156,6 +161,16 @@ Page({
     if (idx >= 0) localRooms[idx] = room
     else localRooms.unshift(room)
     wx.setStorageSync('localRooms', localRooms)
+
+    console.log('[avatar][room] saveRoom:start', {
+      roomId: room._id,
+      updateFields: options.updateFields || null,
+      players: (room.players || []).map(p => ({
+        id: p.id,
+        nickname: p.nickname,
+        avatarUrl: p.avatarUrl
+      }))
+    })
   },
 
   _updateRoomData(room) {
@@ -185,7 +200,7 @@ Page({
       const enriched = {
         ...p,
         displayAvatarUrl: this.getDisplayAvatarUrl(p.avatarUrl),
-        hasDisplayAvatar: isRenderableImageUrl(this.getDisplayAvatarUrl(p.avatarUrl)),
+        hasDisplayAvatar: shouldRenderAvatar(p.avatarUrl, this.getDisplayAvatarUrl(p.avatarUrl)),
         color: p.avatarColor || getDefaultAvatar(i),
         totalScore: netScores[p.id] || 0
       }
@@ -311,13 +326,35 @@ Page({
 
     this._repairingAvatar = true
     try {
+      console.log('[avatar][room] repairMyLocalAvatar:start', {
+        roomId: room._id,
+        myPlayerId,
+        currentAvatarUrl: player.avatarUrl
+      })
       const avatarUrl = await ensureCloudAvatar(player.avatarUrl, player.id || getClientId())
       if (avatarUrl && avatarUrl !== player.avatarUrl) {
+        console.log('[avatar][room] repairMyLocalAvatar:save', {
+          roomId: room._id,
+          myPlayerId,
+          oldAvatarUrl: player.avatarUrl,
+          nextAvatarUrl: avatarUrl
+        })
         player.avatarUrl = avatarUrl
         await this.saveRoom(room, { updateFields: ['players'] })
+      } else {
+        console.log('[avatar][room] repairMyLocalAvatar:no-change', {
+          roomId: room._id,
+          myPlayerId,
+          avatarUrl
+        })
       }
     } catch (err) {
       console.warn('repair local avatar failed', err)
+      console.log('[avatar][room] repairMyLocalAvatar:fail', {
+        roomId: room._id,
+        myPlayerId,
+        err
+      })
     } finally {
       this._repairingAvatar = false
     }
@@ -332,11 +369,20 @@ Page({
     const cloudUrls = (room.players || [])
       .map(player => player.avatarUrl)
       .filter(url => url && url.startsWith('cloud://') && !(this.avatarUrlMap && this.avatarUrlMap[url]))
+    console.log('[avatar][room] resolveRoomAvatarUrls', {
+      roomId: room && room._id,
+      cloudUrls,
+      cachedKeys: Object.keys(this.avatarUrlMap || {})
+    })
     if (cloudUrls.length === 0) return
 
     resolveCloudFileUrls(cloudUrls).then(map => {
       if (!map || Object.keys(map).length === 0) return
       this.avatarUrlMap = { ...(this.avatarUrlMap || {}), ...map }
+      console.log('[avatar][room] resolveRoomAvatarUrls:map', {
+        roomId: room && room._id,
+        map
+      })
       const currentRoom = this.data.room
       if (currentRoom && currentRoom._id === room._id) {
         this._updateRoomData(currentRoom)
@@ -488,12 +534,20 @@ Page({
     const { room, myPlayerId } = this.data
     const player = room.players.find(p => p.id === myPlayerId)
     if (!player) return
+    const displayAvatarUrl = this.getDisplayAvatarUrl(player.avatarUrl)
+    console.log('[avatar][room] onEditMyProfile', {
+      roomId: room._id,
+      myPlayerId,
+      avatarUrl: player.avatarUrl,
+      displayAvatarUrl,
+      hasPreviewAvatar: shouldRenderAvatar(player.avatarUrl, displayAvatarUrl, true)
+    })
     this.setData({
       showEditProfile: true,
       editPlayer: {
         ...player,
-        displayAvatarUrl: this.getDisplayAvatarUrl(player.avatarUrl),
-        hasDisplayAvatar: isRenderableImageUrl(this.getDisplayAvatarUrl(player.avatarUrl))
+        displayAvatarUrl,
+        hasDisplayAvatar: shouldRenderAvatar(player.avatarUrl, displayAvatarUrl, true)
       },
       editName: player.nickname
     })
@@ -529,22 +583,76 @@ Page({
       success: async (res) => {
         const tempPath = res.tempFiles[0].tempFilePath
         const { editPlayer, room } = this.data
+        console.log('[avatar][room] onChooseAvatar:selected', {
+          roomId: room && room._id,
+          playerId: editPlayer && editPlayer.id,
+          tempPath,
+          tempFile: res.tempFiles[0]
+        })
+        this.setData({
+          editPlayer: {
+            ...editPlayer,
+            avatarUrl: tempPath,
+            displayAvatarUrl: tempPath,
+            hasDisplayAvatar: shouldRenderAvatar(tempPath, tempPath, true)
+          }
+        })
         let avatarUrl = tempPath
         try {
           avatarUrl = await ensureCloudAvatar(tempPath, editPlayer.id || getClientId())
         } catch (err) {
           console.warn('upload avatar failed', err)
+          console.log('[avatar][room] onChooseAvatar:upload-fail', {
+            roomId: room && room._id,
+            playerId: editPlayer && editPlayer.id,
+            tempPath,
+            err
+          })
         }
         const p = room.players.find(pl => pl.id === editPlayer.id)
         if (p) p.avatarUrl = avatarUrl
+        console.log('[avatar][room] onChooseAvatar:saveRoom', {
+          roomId: room && room._id,
+          playerId: editPlayer && editPlayer.id,
+          savedAvatarUrl: avatarUrl,
+          uploadSucceeded: avatarUrl !== tempPath
+        })
         await this.saveRoom(room, { updateFields: ['players'] })
+        if (avatarUrl && avatarUrl.startsWith('cloud://')) {
+          try {
+            const map = await resolveCloudFileUrls([avatarUrl])
+            if (map && map[avatarUrl]) {
+              this.avatarUrlMap = { ...(this.avatarUrlMap || {}), ...map }
+            }
+            console.log('[avatar][room] onChooseAvatar:resolve-after-upload', {
+              roomId: room && room._id,
+              playerId: editPlayer && editPlayer.id,
+              avatarUrl,
+              map
+            })
+          } catch (err) {
+            console.log('[avatar][room] onChooseAvatar:resolve-after-upload-fail', {
+              roomId: room && room._id,
+              playerId: editPlayer && editPlayer.id,
+              avatarUrl,
+              err
+            })
+          }
+        }
         const displayAvatarUrl = this.getDisplayAvatarUrl(avatarUrl)
+        console.log('[avatar][room] onChooseAvatar:after-save', {
+          roomId: room && room._id,
+          playerId: editPlayer && editPlayer.id,
+          avatarUrl,
+          displayAvatarUrl,
+          hasPreviewAvatar: shouldRenderAvatar(avatarUrl, displayAvatarUrl, true)
+        })
         this.setData({
           editPlayer: {
             ...editPlayer,
             avatarUrl,
             displayAvatarUrl,
-            hasDisplayAvatar: isRenderableImageUrl(displayAvatarUrl)
+            hasDisplayAvatar: shouldRenderAvatar(avatarUrl, displayAvatarUrl, true)
           }
         })
       }
@@ -1270,6 +1378,17 @@ Page({
         }
       }
     }).then(res => {
+      console.log('[avatar][room] saveRoom:result', {
+        roomId: room._id,
+        updateFields: options.updateFields || null,
+        resultCode: res.result && res.result.code,
+        errMsg: res.result && res.result.errMsg,
+        players: res.result && res.result.data && (res.result.data.players || []).map(p => ({
+          id: p.id,
+          nickname: p.nickname,
+          avatarUrl: p.avatarUrl
+        }))
+      })
       if (res.result && res.result.code === 0 && res.result.data) {
         const mergedRoom = res.result.data
         this.cacheRoom(mergedRoom)

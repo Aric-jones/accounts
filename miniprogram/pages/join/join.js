@@ -1,4 +1,4 @@
-const { generateId, getClientId, ensureCloudAvatar, saveGlobalUserProfile, showToast, showLoading, hideLoading } = require('../../utils/util')
+const { generateId, getClientId, ensureHttpAvatar, saveGlobalUserProfile, showToast, showLoading, hideLoading } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 
 Page({
@@ -72,7 +72,7 @@ Page({
         userInfo
       })
       try {
-        avatarUrl = await ensureCloudAvatar(avatarUrl, clientId)
+        avatarUrl = await ensureHttpAvatar(avatarUrl, clientId)
         console.log('[avatar][join] upload-result', {
           shareCode,
           clientId,

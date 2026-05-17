@@ -1,4 +1,4 @@
-const { ensureCloudAvatar, getClientId, saveGlobalUserProfile, showToast, showLoading, hideLoading } = require('../../utils/util')
+const { ensureHttpAvatar, getClientId, saveGlobalUserProfile, showToast, showLoading, hideLoading } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 const { calculateNetScores } = require('../../utils/settlement')
 
@@ -107,7 +107,7 @@ Page({
     getApp().globalData.userInfo = userInfo
     try {
       showLoading('上传头像...')
-      const cloudAvatar = await ensureCloudAvatar(avatarUrl, wx.getStorageSync('clientId') || 'profile')
+      const cloudAvatar = await ensureHttpAvatar(avatarUrl, wx.getStorageSync('clientId') || 'profile')
       console.log('[avatar][profile] chooseAvatar:upload-result', {
         inputAvatarUrl: avatarUrl,
         savedAvatarUrl: cloudAvatar,

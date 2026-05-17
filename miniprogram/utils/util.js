@@ -125,6 +125,24 @@ const ensureCloudAvatar = async (avatarUrl, ownerId = 'user') => {
   }
 }
 
+const ensureHttpAvatar = async (avatarUrl, ownerId = 'user') => {
+  logAvatar('ensureHttpAvatar:start', { avatarUrl, ownerId })
+  const storedAvatarUrl = await ensureCloudAvatar(avatarUrl, ownerId)
+  if (storedAvatarUrl && storedAvatarUrl.startsWith('cloud://')) {
+    try {
+      const map = await resolveCloudFileUrls([storedAvatarUrl])
+      const httpUrl = map && map[storedAvatarUrl]
+      logAvatar('ensureHttpAvatar:resolved', { storedAvatarUrl, httpUrl })
+      return httpUrl || storedAvatarUrl
+    } catch (err) {
+      logAvatar('ensureHttpAvatar:resolve-fail', { storedAvatarUrl, err })
+      return storedAvatarUrl
+    }
+  }
+  logAvatar('ensureHttpAvatar:done', { avatarUrl, storedAvatarUrl })
+  return storedAvatarUrl || ''
+}
+
 const resolveCloudFileUrls = async (urls) => {
   const cloudUrls = [...new Set((urls || []).filter(url => url && url.startsWith('cloud://')))]
   logAvatar('resolveCloudFileUrls:start', {
@@ -249,6 +267,7 @@ module.exports = {
   generateId,
   getClientId,
   ensureCloudAvatar,
+  ensureHttpAvatar,
   resolveCloudFileUrls,
   isRenderableImageUrl,
   isPreviewableImageUrl,

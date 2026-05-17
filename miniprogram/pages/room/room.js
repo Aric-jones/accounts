@@ -1,4 +1,4 @@
-const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureCloudAvatar, resolveCloudFileUrls, shouldRenderAvatar, saveGlobalUserProfile, fetchGlobalUserProfiles } = require('../../utils/util')
+const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureHttpAvatar, resolveCloudFileUrls, shouldRenderAvatar, saveGlobalUserProfile, fetchGlobalUserProfiles } = require('../../utils/util')
 const { calculateNetScores, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
 const voice = require('../../utils/voice')
@@ -352,9 +352,9 @@ Page({
     try {
       let nextAvatarUrl = player.avatarUrl || ''
       if (localAvatarUrl && localAvatarUrl !== player.avatarUrl) {
-        nextAvatarUrl = await ensureCloudAvatar(localAvatarUrl, player.id || getClientId())
+        nextAvatarUrl = await ensureHttpAvatar(localAvatarUrl, player.id || getClientId())
       } else if (player.avatarUrl) {
-        nextAvatarUrl = await ensureCloudAvatar(player.avatarUrl, player.id || getClientId())
+        nextAvatarUrl = await ensureHttpAvatar(player.avatarUrl, player.id || getClientId())
       }
 
       let changed = false
@@ -419,7 +419,7 @@ Page({
         myPlayerId,
         currentAvatarUrl: player.avatarUrl
       })
-      const avatarUrl = await ensureCloudAvatar(player.avatarUrl, player.id || getClientId())
+      const avatarUrl = await ensureHttpAvatar(player.avatarUrl, player.id || getClientId())
       if (avatarUrl && avatarUrl !== player.avatarUrl) {
         console.log('[avatar][room] repairMyLocalAvatar:save', {
           roomId: room._id,
@@ -809,7 +809,7 @@ Page({
         })
         let avatarUrl = tempPath
         try {
-          avatarUrl = await ensureCloudAvatar(tempPath, editPlayer.id || getClientId())
+          avatarUrl = await ensureHttpAvatar(tempPath, editPlayer.id || getClientId())
         } catch (err) {
           console.warn('upload avatar failed', err)
           console.log('[avatar][room] onChooseAvatar:upload-fail', {

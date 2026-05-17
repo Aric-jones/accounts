@@ -1,4 +1,4 @@
-const { GAME_TYPES, generateId, getClientId, ensureCloudAvatar, saveGlobalUserProfile, showToast } = require('../../utils/util')
+const { GAME_TYPES, generateId, getClientId, ensureHttpAvatar, saveGlobalUserProfile, showToast } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 
 Page({
@@ -65,7 +65,7 @@ Page({
     console.log('[avatar][create] before-upload', { clientId, openid, avatarUrl, userInfo })
 
     try {
-      avatarUrl = await ensureCloudAvatar(avatarUrl, clientId)
+      avatarUrl = await ensureHttpAvatar(avatarUrl, clientId)
       console.log('[avatar][create] upload-result', {
         clientId,
         openid,

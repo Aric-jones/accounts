@@ -1,4 +1,4 @@
-const { GAME_TYPES, showToast, getDefaultAvatar, generateId } = require('../../utils/util')
+const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId } = require('../../utils/util')
 const { calculateNetScores, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
 const voice = require('../../utils/voice')
@@ -13,7 +13,6 @@ Page({
     codeChars: [],
     showInvite: false,
     showPayDialog: false,
-    showAddPlayer: false,
     showEditProfile: false,
     showTeaPanel: false,
     showChart: false,
@@ -38,7 +37,6 @@ Page({
     teaFeeCollected: 0,
     pendingTeaFee: 0,
     teaPercentOptions: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
-    newPlayerName: '',
     editName: '',
     editPlayer: null,
     keyboardHeight: 0,
@@ -66,6 +64,14 @@ Page({
     if (this.roomId) this.loadRoom(this.roomId)
   },
 
+  onPullDownRefresh() {
+    if (!this.roomId) {
+      wx.stopPullDownRefresh()
+      return
+    }
+    this.loadRoom(this.roomId).finally(() => wx.stopPullDownRefresh())
+  },
+
   onUnload() {
     this.stopWatcher()
     if (!this.roomId) return
@@ -90,7 +96,11 @@ Page({
     this.watcher = this._db().collection('rooms').doc(roomId).watch({
       onChange: (snapshot) => {
         if (snapshot.doc) {
-          this._updateRoomData(snapshot.doc)
+          const localRooms = wx.getStorageSync('localRooms') || []
+          const localRoom = localRooms.find(r => r._id === roomId)
+          const localTime = localRoom && localRoom.updatedAt ? new Date(localRoom.updatedAt).getTime() : 0
+          const cloudTime = snapshot.doc.updatedAt ? new Date(snapshot.doc.updatedAt).getTime() : 0
+          this._updateRoomData(localTime > cloudTime ? localRoom : snapshot.doc)
         }
       },
       onError: (err) => {
@@ -108,16 +118,21 @@ Page({
 
   loadRoom(roomId) {
     const db = this._db()
-    db.collection('rooms').doc(roomId).get().then(res => {
+    return db.collection('rooms').doc(roomId).get().then(res => {
       if (!res.data) {
         showToast('房间不存在')
         setTimeout(() => wx.navigateBack(), 1000)
         return
       }
-      const room = res.data
       // 写入本地缓存
       const localRooms = wx.getStorageSync('localRooms') || []
       const idx = localRooms.findIndex(r => r._id === roomId)
+      const localRoom = idx >= 0 ? localRooms[idx] : null
+      const cloudRoom = res.data
+      const localTime = localRoom && localRoom.updatedAt ? new Date(localRoom.updatedAt).getTime() : 0
+      const cloudTime = cloudRoom.updatedAt ? new Date(cloudRoom.updatedAt).getTime() : 0
+      const room = localTime > cloudTime ? localRoom : cloudRoom
+
       if (idx >= 0) localRooms[idx] = room
       else localRooms.unshift(room)
       wx.setStorageSync('localRooms', localRooms)
@@ -186,16 +201,16 @@ Page({
       }
     }
 
-    const myPlayerId = this.data.myPlayerId || (realPlayers.find(p => p.isCreator) || {}).id || ''
+    const myPlayerId = this.resolveMyPlayerId(realPlayers, room._id)
     const displayTxns = this.buildDisplayTxns(room.transactions, this.data.showAllTxns)
 
     const allChipPlayers = []
-    if (tablePlayer) {
+    const me = realPlayers.find(p => p.id === myPlayerId)
+    if (me) {
       allChipPlayers.push({
-        ...tablePlayer,
-        color: 'linear-gradient(135deg, #F59E0B, #D97706)',
-        avatarText: '🎯',
-        chipLabel: '台面'
+        ...me,
+        avatarText: me.nickname ? me.nickname[0] : '?',
+        chipLabel: me.nickname
       })
     }
     if (teaPlayer) {
@@ -206,12 +221,22 @@ Page({
         chipLabel: teaFeePercent + '%'
       })
     }
-    realPlayers.forEach(p => {
+    if (tablePlayer) {
       allChipPlayers.push({
-        ...p,
-        avatarText: p.nickname ? p.nickname[0] : '?',
-        chipLabel: p.nickname
+        ...tablePlayer,
+        color: 'linear-gradient(135deg, #F59E0B, #D97706)',
+        avatarText: '🎯',
+        chipLabel: '台面'
       })
+    }
+    realPlayers.forEach(p => {
+      if (p.id !== myPlayerId) {
+        allChipPlayers.push({
+          ...p,
+          avatarText: p.nickname ? p.nickname[0] : '?',
+          chipLabel: p.nickname
+        })
+      }
     })
 
     this.setData({
@@ -232,6 +257,34 @@ Page({
     })
 
     wx.setNavigationBarTitle({ title: room.name })
+  },
+
+  resolveMyPlayerId(realPlayers, roomId) {
+    const savedMap = wx.getStorageSync('roomPlayerIds') || {}
+    const savedId = savedMap[roomId]
+    if (savedId && realPlayers.find(p => p.id === savedId)) return savedId
+
+    const app = getApp()
+    const openid = app.globalData.openid || ''
+    if (openid) {
+      const byOpenid = realPlayers.find(p => p.openid === openid)
+      if (byOpenid) {
+        savedMap[roomId] = byOpenid.id
+        wx.setStorageSync('roomPlayerIds', savedMap)
+        return byOpenid.id
+      }
+    }
+
+    const clientId = getClientId()
+    const byClient = realPlayers.find(p => p.clientId === clientId)
+    if (byClient) {
+      savedMap[roomId] = byClient.id
+      wx.setStorageSync('roomPlayerIds', savedMap)
+      return byClient.id
+    }
+
+    const creator = realPlayers.find(p => p.isCreator)
+    return creator ? creator.id : ''
   },
 
   buildDisplayTxns(transactions, showAll) {
@@ -316,58 +369,29 @@ Page({
     }
   },
 
-  // === Add Player ===
-
-  onAddPlayer() {
-    this.setData({ showAddPlayer: true, newPlayerName: '' })
-  },
-
-  onCloseAddPlayer() {
-    this.setData({ showAddPlayer: false, keyboardHeight: 0 })
-  },
-
-  onNewPlayerInput(e) {
-    this.setData({ newPlayerName: e.detail.value })
-  },
-
-  onConfirmAddPlayer() {
-    const name = this.data.newPlayerName.trim()
-    if (!name) return showToast('请输入昵称')
-
-    const { room } = this.data
-    room.players.push({
-      id: generateId(),
-      nickname: name,
-      avatarUrl: '',
-      isCreator: false
-    })
-    this.saveRoom(room)
-    this.setData({ showAddPlayer: false })
-    wx.vibrateShort({ type: 'heavy' })
-    this.loadRoom(room._id)
-    voice.onPlayerJoin(name)
-  },
-
   // === Tap Chip (unified) ===
 
   onTapChip(e) {
     const id = e.currentTarget.dataset.id
     if (id === '__table__') return this.onTapTable()
     if (id === '__tea__') return this.onTapTeaFee()
+    if (id === this.data.myPlayerId) return this.onEditMyProfile()
     this.onTapPlayer(e)
   },
 
   onTapPlayer(e) {
     const id = e.currentTarget.dataset.id
-    const { realPlayers } = this.data
+    const { realPlayers, myPlayerId } = this.data
     const player = realPlayers.find(p => p.id === id)
     if (!player) return
+    const payer = realPlayers.find(p => p.id === myPlayerId)
+    if (!payer) return showToast('未识别当前用户')
+    if (player.id === payer.id) return this.onEditMyProfile()
 
-    const defaultPayer = realPlayers.find(p => p.id !== id) || player
     this.setData({
       showPayDialog: true,
       payTarget: player,
-      payFrom: defaultPayer,
+      payFrom: payer,
       payAmount: ''
     })
   },
@@ -458,14 +482,6 @@ Page({
     this.setData({ showPayDialog: false, payTarget: null, payFrom: null, payAmount: '', keyboardHeight: 0 })
   },
 
-  onSwitchPayer(e) {
-    const id = e.currentTarget.dataset.id
-    const player = this.data.realPlayers.find(p => p.id === id)
-    if (player && player.id !== this.data.payTarget.id) {
-      this.setData({ payFrom: player })
-    }
-  },
-
   onQuickAmount(e) {
     this.setData({ payAmount: e.currentTarget.dataset.val })
   },
@@ -483,11 +499,17 @@ Page({
     if (!payTarget || !payFrom) return showToast('请选择付款人')
     if (payFrom.id === payTarget.id) return showToast('不能支付给自己')
 
+    if (payFrom.id !== this.data.myPlayerId) return showToast('只能用自己的身份支付')
+
     const now = new Date().toISOString()
+    const opId = generateId()
     room.transactions = room.transactions || []
 
     room.transactions.push({
       id: generateId(),
+      operatorId: payFrom.id,
+      operationId: opId,
+      operationType: 'pay',
       from: payFrom.id, to: payTarget.id, amount,
       fromName: payFrom.nickname, toName: payTarget.nickname,
       timestamp: now
@@ -498,6 +520,9 @@ Page({
     if (teaFee > 0) {
       room.transactions.push({
         id: generateId(),
+        operatorId: payFrom.id,
+        operationId: opId,
+        operationType: 'autoTea',
         from: payTarget.id, to: '__tea__', amount: teaFee,
         fromName: payTarget.nickname, toName: '茶水费',
         timestamp: now
@@ -561,6 +586,9 @@ Page({
           if (fee > 0) {
             room.transactions.push({
               id: generateId(),
+              operatorId: this.data.myPlayerId,
+              operationId: generateId(),
+              operationType: 'autoTea',
               from: p.id, to: '__tea__', amount: fee,
               fromName: p.nickname, toName: '茶水费',
               timestamp: now
@@ -596,6 +624,7 @@ Page({
 
     let totalCollected = 0
     const now = new Date().toISOString()
+    const opId = generateId()
     room.players.forEach(p => {
       if (p.id === '__tea__') return
       if (winnings[p.id] > 0) {
@@ -603,6 +632,9 @@ Page({
         if (fee > 0) {
           room.transactions.push({
             id: generateId(),
+            operatorId: this.data.myPlayerId,
+            operationId: opId,
+            operationType: 'manualTea',
             from: p.id, to: '__tea__', amount: fee,
             fromName: p.nickname, toName: '茶水费',
             timestamp: now
@@ -628,12 +660,14 @@ Page({
   // === Table (台面) ===
 
   onTapTable() {
-    const { realPlayers } = this.data
+    const { realPlayers, myPlayerId } = this.data
+    const me = realPlayers.find(p => p.id === myPlayerId)
+    if (!me) return showToast('未识别当前用户')
     this.setData({
       showTableDialog: true,
       tableDirection: 'pay',
       tableAmount: '',
-      tableFrom: realPlayers[0] || null
+      tableFrom: me
     })
   },
 
@@ -643,12 +677,6 @@ Page({
 
   onTableDirection(e) {
     this.setData({ tableDirection: e.currentTarget.dataset.dir })
-  },
-
-  onTablePlayerSelect(e) {
-    const id = e.currentTarget.dataset.id
-    const player = this.data.realPlayers.find(p => p.id === id)
-    if (player) this.setData({ tableFrom: player })
   },
 
   onTableQuickAmount(e) {
@@ -666,17 +694,22 @@ Page({
     const amount = Math.min(parseInt(tableAmount) || 0, 99999)
     if (!amount || amount <= 0) return showToast('请输入有效分数')
     if (!tableFrom) return showToast('请选择玩家')
+    if (tableFrom.id !== this.data.myPlayerId) return showToast('只能操作自己的台面')
 
     if (tableDirection === 'take' && amount > tableBalance) {
       return showToast('台面余额不足（当前' + tableBalance + '分）')
     }
 
     const now = new Date().toISOString()
+    const opId = generateId()
     room.transactions = room.transactions || []
 
     if (tableDirection === 'pay') {
       room.transactions.push({
         id: generateId(),
+        operatorId: tableFrom.id,
+        operationId: opId,
+        operationType: 'tablePay',
         from: tableFrom.id, to: '__table__', amount,
         fromName: tableFrom.nickname, toName: '台面',
         timestamp: now
@@ -684,6 +717,9 @@ Page({
     } else {
       room.transactions.push({
         id: generateId(),
+        operatorId: tableFrom.id,
+        operationId: opId,
+        operationType: 'tableTake',
         from: '__table__', to: tableFrom.id, amount,
         fromName: '台面', toName: tableFrom.nickname,
         timestamp: now
@@ -980,20 +1016,18 @@ Page({
   // === Undo ===
 
   onUndo() {
-    const { room } = this.data
+    const { room, myPlayerId } = this.data
     const txns = room.transactions || []
     if (txns.length === 0) return showToast('没有交易记录')
 
-    const last = txns[txns.length - 1]
-    let undoCount = 1
-    let desc = last.fromName + '→' + last.toName + ' ' + last.amount + '分'
-    if (last.to === '__tea__' && txns.length >= 2) {
-      const prev = txns[txns.length - 2]
-      undoCount = 2
-      desc = prev.fromName + '→' + prev.toName + ' ' + prev.amount + '分（含茶水费）'
-    }
+    const undoRange = this.findMyUndoRange(txns, myPlayerId)
+    if (!undoRange) return showToast('没有可撤销的本人操作')
+    const undoTxns = txns.slice(undoRange.start, undoRange.end + 1)
+    const main = undoTxns.find(t => t.operationType !== 'autoTea') || undoTxns[0]
+    let desc = main.fromName + '→' + main.toName + ' ' + main.amount + '分'
+    if (undoTxns.length > 1) desc += '（含关联记录）'
 
-    const simTxns = txns.slice(0, txns.length - undoCount)
+    const simTxns = txns.slice(0, undoRange.start).concat(txns.slice(undoRange.end + 1))
     const simNet = {}
     room.players.forEach(p => { simNet[p.id] = 0 })
     simTxns.forEach(t => {
@@ -1009,13 +1043,42 @@ Page({
       content: '撤销 ' + desc + '？',
       success: (res) => {
         if (!res.confirm) return
-        room.transactions.splice(-undoCount, undoCount)
+        room.transactions.splice(undoRange.start, undoRange.end - undoRange.start + 1)
         room.updatedAt = new Date().toISOString()
         this.saveRoom(room)
         this.loadRoom(room._id)
         showToast('已撤销')
       }
     })
+  },
+
+  findMyUndoRange(txns, myPlayerId) {
+    for (let i = txns.length - 1; i >= 0; i--) {
+      const tx = txns[i]
+      const isOwnOperation = tx.operatorId
+        ? tx.operatorId === myPlayerId
+        : (tx.from === myPlayerId || tx.to === myPlayerId)
+      if (!isOwnOperation) continue
+
+      if (tx.operationId) {
+        let start = i
+        let end = i
+        while (start > 0 && txns[start - 1].operationId === tx.operationId) start--
+        while (end < txns.length - 1 && txns[end + 1].operationId === tx.operationId) end++
+        const group = txns.slice(start, end + 1)
+        const groupOwned = group.every(item => !item.operatorId || item.operatorId === myPlayerId)
+        if (groupOwned) return { start, end }
+        continue
+      }
+
+      if (tx.to === '__tea__' && i > 0 && txns[i - 1].to !== '__tea__') {
+        const prev = txns[i - 1]
+        const prevOwn = prev.from === myPlayerId || prev.to === myPlayerId
+        if (prevOwn) return { start: i - 1, end: i }
+      }
+      return { start: i, end: i }
+    }
+    return null
   },
 
   // === End Game ===
@@ -1038,6 +1101,7 @@ Page({
         const netScores = calculateNetScores(room.transactions, room.players)
         room.status = 'settled'
         room.winner = findWinner(netScores, room.players)
+        room.settledAt = new Date().toISOString()
         room.updatedAt = new Date().toISOString()
         this.saveRoom(room)
         wx.redirectTo({ url: '/pages/settlement/settlement?id=' + room._id })
@@ -1055,18 +1119,27 @@ Page({
     else localRooms.unshift(room)
     wx.setStorageSync('localRooms', localRooms)
 
-    // 写云端（实时同步）
-    this._db().collection('rooms').doc(room._id).update({
+    // 通过云函数写云端，避免参与者受数据库权限限制。
+    return wx.cloud.callFunction({
+      name: 'recordScore',
       data: {
-        players: room.players,
-        transactions: room.transactions,
-        teaFeePercent: room.teaFeePercent,
-        teaCollectMode: room.teaCollectMode,
-        lastTeaCollectIdx: room.lastTeaCollectIdx,
-        updatedAt: room.updatedAt
+        action: 'saveRoom',
+        roomId: room._id,
+        room: {
+          players: room.players,
+          transactions: room.transactions,
+          teaFeePercent: room.teaFeePercent,
+          teaCollectMode: room.teaCollectMode,
+          lastTeaCollectIdx: room.lastTeaCollectIdx,
+          status: room.status,
+          winner: room.winner || null,
+          settledAt: room.settledAt || null,
+          updatedAt: room.updatedAt
+        }
       }
     }).catch(err => {
       console.error('保存房间失败', err)
+      showToast('云端保存失败，已保存在本机')
     })
   }
 })

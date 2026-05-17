@@ -7,21 +7,28 @@ exports.main = async (event, context) => {
 
   try {
     const room = await db.collection('rooms').doc(roomId).get()
-    const { players, rounds } = room.data
+    const { players, rounds = [], transactions = [] } = room.data
 
     const netScores = {}
     players.forEach(p => { netScores[p.id] = 0 })
-    rounds.forEach(round => {
-      Object.keys(round.scores || {}).forEach(pid => {
-        if (netScores[pid] !== undefined) {
-          netScores[pid] += round.scores[pid]
-        }
+    if (transactions.length > 0) {
+      transactions.forEach(t => {
+        if (netScores[t.from] !== undefined) netScores[t.from] -= t.amount
+        if (netScores[t.to] !== undefined) netScores[t.to] += t.amount
       })
-    })
+    } else {
+      rounds.forEach(round => {
+        Object.keys(round.scores || {}).forEach(pid => {
+          if (netScores[pid] !== undefined) {
+            netScores[pid] += round.scores[pid]
+          }
+        })
+      })
+    }
 
     let maxScore = -Infinity
     let winner = null
-    players.forEach(p => {
+    players.filter(p => p.id !== '__tea__' && p.id !== '__table__').forEach(p => {
       if (netScores[p.id] > maxScore) {
         maxScore = netScores[p.id]
         winner = { id: p.id, nickname: p.nickname, totalScore: maxScore }

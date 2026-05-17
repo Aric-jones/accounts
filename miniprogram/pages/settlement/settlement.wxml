@@ -99,23 +99,4 @@
       <button class="btn-outline btn-home" bindtap="onGoHome">返回首页</button>
     </view>
   </view>
-
-  <!-- 模拟广告区域 -->
-  <view class="ad-mock-zone">
-    <view class="ad-mock-banner">
-      <view class="ad-mock-badge">广告</view>
-      <view class="ad-mock-body">
-        <view class="ad-mock-icon"></view>
-        <view class="ad-mock-text">
-          <text class="ad-mock-title">精选推荐</text>
-          <text class="ad-mock-desc">Banner广告位 · 结算页</text>
-        </view>
-      </view>
-    </view>
-    <view class="ad-mock-reward">
-      <text class="ad-mock-reward-icon">🎬</text>
-      <text class="ad-mock-reward-text">看视频广告再来一局免茶水费</text>
-      <view class="ad-mock-reward-btn">观看</view>
-    </view>
-  </view>
 </view>

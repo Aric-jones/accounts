@@ -35,8 +35,17 @@ Page({
         name: 'getHistory',
         data: { action: 'history', page: 1, pageSize: 100 }
       })
-      const rooms = (res.result && res.result.data) || []
-      const settledRooms = rooms
+      const cloudRooms = (res.result && res.result.data) || []
+      const localRooms = wx.getStorageSync('localRooms') || []
+      const roomMap = {}
+      cloudRooms.concat(localRooms).forEach(room => {
+        if (!room || !room._id) return
+        roomMap[room._id] = {
+          ...(roomMap[room._id] || {}),
+          ...room
+        }
+      })
+      const settledRooms = Object.values(roomMap)
         .filter(r => r.status === 'settled')
         .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
 

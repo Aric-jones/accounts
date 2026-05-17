@@ -14,7 +14,7 @@
 - **历史记录** — 查看过往牌局
 - **个人统计** — 胜率、胜负走势等
 - **AI 摘要** — 牌局结束生成趣味文案（需 DeepSeek API Key，不配置时用本地模板）
-- **AI 数据分析** — 手气指数等本地计算，完整报告需看激励视频解锁
+- **AI 数据分析** — 手气指数等本地计算，广告解锁入口已暂停
 - **分享海报** — Canvas 绘制
 - **深色模式** — 跟随系统主题
 
@@ -22,7 +22,7 @@
 
 - **云开发** — 云函数已部署，数据存储以本地为主，多端实时同步**未完整实现**
 - **语音播报** — 预留接口，实际使用需手动接入微信同声传译插件
-- **广告** — 占位符已预留，需开通流量主后填入真实广告位 ID
+- **广告** — 当前暂停展示和调用，后续如接入流量主需另补规格
 
 ### 预留但未实现
 
@@ -34,7 +34,7 @@
 ```
 miniprogram/         # 小程序前端
 ├── pages/           # 页面（index/create/join/room/settlement/history/analysis/profile）
-├── components/      # 组件（player-card/score-input/ad-banner）
+├── components/      # 组件（player-card/score-input；ad-banner 暂未消费）
 └── utils/           # 工具（settlement/ai/api/poster/voice/theme/util）
 
 cloudfunctions/      # 云函数（部分接入）
@@ -77,6 +77,8 @@ cp miniprogram/config/env.example.js miniprogram/config/env.js
 
 在微信开发者工具中，右键每个云函数文件夹 → 上传并部署。
 
+云开发的具体启用、数据库集合和调试方式见 [docs/reference/cloud-dev-debug.md](docs/reference/cloud-dev-debug.md)。
+
 ### 5. AI 功能（可选）
 
 1. 注册 [DeepSeek Platform](https://platform.deepseek.com)
@@ -91,8 +93,6 @@ cp miniprogram/config/env.example.js miniprogram/config/env.js
 |--------|------|--------|------|
 | `CLOUD_ENV_ID` | 推荐 | `''` | 云开发环境 ID |
 | `DEEPSEEK_API_KEY` | 否 | `'__PLACEHOLDER__'` | DeepSeek API Key，不填则用本地模板 |
-| `AD_BANNER_ID` | 否 | `''` | Banner 广告位 ID（需流量主权限） |
-| `AD_REWARDED_VIDEO_ID` | 否 | `''` | 激励视频广告位 ID（需流量主权限） |
 
 详细说明见 [docs/reference/config.md](docs/reference/config.md)
 
@@ -119,6 +119,7 @@ Room {
 - [docs/architecture/architecture.md](docs/architecture/architecture.md) — 架构文档
 - [docs/process/workflow.md](docs/process/workflow.md) — 文档先行工作流
 - [docs/reference/](docs/reference/) — 参考资料
+- [docs/reference/cloud-dev-debug.md](docs/reference/cloud-dev-debug.md) — 云开发使用与调试说明
 
 ## 版权
 

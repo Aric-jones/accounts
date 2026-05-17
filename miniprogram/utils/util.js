@@ -33,6 +33,15 @@ const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9)
 }
 
+const getClientId = () => {
+  let clientId = wx.getStorageSync('clientId')
+  if (!clientId) {
+    clientId = generateId()
+    wx.setStorageSync('clientId', clientId)
+  }
+  return clientId
+}
+
 const GAME_TYPES = {
   mahjong: { name: '麻将', icon: '🀄', players: [3, 4], defaultPlayers: 4 },
   guandan: { name: '掼蛋', icon: '🃏', players: [4], defaultPlayers: 4 },
@@ -63,6 +72,7 @@ module.exports = {
   formatDate,
   formatRelativeTime,
   generateId,
+  getClientId,
   GAME_TYPES,
   getDefaultAvatar,
   showToast,

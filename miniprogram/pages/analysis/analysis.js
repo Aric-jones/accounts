@@ -22,7 +22,7 @@ Page({
     fortuneStars: '⭐⭐⭐',
     fortuneText: '',
     fortuneTip: '',
-    fullReportUnlocked: false
+    fullReportUnlocked: true
   },
 
   onLoad() {
@@ -222,24 +222,6 @@ Page({
 
   onShareFortune() {
     wx.showToast({ title: '分享功能开发中', icon: 'none' })
-  },
-
-  onUnlockFullReport() {
-    if (wx.createRewardedVideoAd) {
-      const ad = wx.createRewardedVideoAd({ adUnitId: 'YOUR_REWARDED_AD_ID' })
-      ad.show().catch(() => {
-        ad.load().then(() => ad.show())
-      })
-      ad.onClose((res) => {
-        if (res && res.isEnded) {
-          this.setData({ fullReportUnlocked: true })
-          wx.showToast({ title: '已解锁完整报告！', icon: 'success' })
-        }
-      })
-    } else {
-      this.setData({ fullReportUnlocked: true })
-      wx.showToast({ title: '当前环境不支持广告', icon: 'none' })
-    }
   },
 
   onShareAppMessage() {

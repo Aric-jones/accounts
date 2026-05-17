@@ -25,12 +25,12 @@
 | 功能 | 状态 | 说明 |
 |------|------|------|
 | AI 牌局摘要 | ⚠️ | 需要 DeepSeek API Key；无 Key 时使用本地模板兜底 |
-| AI 数据分析 | ⚠️ | 本地计算手气指数等指标；完整报告需看激励视频广告解锁 |
+| AI 数据分析 | ⚠️ | 本地计算手气指数等指标；广告解锁入口已暂停，报告不再依赖广告观看 |
 | 语音播报（加入） | ❌ | 预留接口，需微信同声传译插件，未实际接入 |
 | 语音记分 | ❌ | 预留接口，未实现 |
 | Canvas 分享海报 | ✅ | 本地绘制 |
-| 激励视频广告 | ❌ | 预留接口，需 UV>=500 开通流量主 |
-| Banner 广告 | ❌ | 预留接口，需 UV>=500 开通流量主 |
+| 激励视频广告 | 暂停 | 当前不展示、不调用；后续如重新接入需另写规格 |
+| Banner 广告 | 暂停 | 当前不展示、不调用；后续如重新接入需另写规格 |
 
 ### 2.3 数据存储
 
@@ -95,7 +95,7 @@ rounds: [{
 - **实时云同步**：未完整实现，云函数已部署但数据不保证多端实时同步
 - **语音播报**：预留 `announceJoin()` 接口，实际接入需用户手动添加微信同声传译插件
 - **语音记分**：`onVoiceScore()` 方法预留，未实现
-- **广告**：代码中有占位符，需用户开通流量主后填入真实 ad-unit-id
+- **广告**：当前已暂停展示和调用；后续如重新接入微信流量主，需先补规格、配置说明和验收点
 - **DeepSeek API**：在 `cloudfunctions/aiSummary/index.js` 中配置，不配置则使用本地模板
 
 ## 五、配置说明
@@ -105,7 +105,5 @@ rounds: [{
 | AppID | `project.config.json` | 是 | 在微信公众平台注册后获取 |
 | CLOUD_ENV_ID | `miniprogram/config/env.js` | 推荐 | 云开发环境 ID |
 | DEEPSEEK_API_KEY | `miniprogram/config/env.js` | 否 | API Key，本地模板可兜底 |
-| AD_BANNER_ID | `miniprogram/config/env.js` | 否 | 流量主广告位 ID |
-| AD_REWARDED_VIDEO_ID | `miniprogram/config/env.js` | 否 | 激励视频广告位 ID |
 
 详细配置文档见 [配置说明](./reference/config.md)

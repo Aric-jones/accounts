@@ -1,4 +1,4 @@
-const { GAME_TYPES, generateId, showToast } = require('../../utils/util')
+const { GAME_TYPES, generateId, getClientId, showToast } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 
 Page({
@@ -59,12 +59,16 @@ Page({
     const shareCode = app.generateRoomCode()
     const now = new Date()
     const userInfo = wx.getStorageSync('userInfo') || {}
+    const clientId = getClientId()
+    const openid = app.globalData.openid || ''
 
     // Only the creator is in the room initially
     const creator = {
       id: generateId(),
       nickname: userInfo.nickName || '房主',
       avatarUrl: userInfo.avatarUrl || '',
+      clientId,
+      openid,
       isCreator: true
     }
 
@@ -80,7 +84,7 @@ Page({
       teaCollectMode: 'immediate',
       status: 'playing',
       shareCode: shareCode,
-      createdBy: app.globalData.openid || 'local',
+      createdBy: openid || 'local',
       createdAt: now.toISOString(),
       updatedAt: now.toISOString()
     }
@@ -98,6 +102,10 @@ Page({
       const myRoomIds = wx.getStorageSync('myRoomIds') || []
       myRoomIds.unshift(roomData._id)
       wx.setStorageSync('myRoomIds', myRoomIds)
+
+      const roomPlayerIds = wx.getStorageSync('roomPlayerIds') || {}
+      roomPlayerIds[roomData._id] = creator.id
+      wx.setStorageSync('roomPlayerIds', roomPlayerIds)
 
       this.setData({ creating: false })
       wx.redirectTo({ url: '/pages/room/room?id=' + roomData._id + '&newRoom=1' })

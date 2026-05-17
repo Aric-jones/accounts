@@ -33,8 +33,12 @@ exports.main = async (event, context) => {
   if (action === 'history') {
     try {
       const skip = (page - 1) * pageSize
+      const _ = db.command
       const res = await db.collection('rooms')
-        .where({ createdBy: wxContext.OPENID })
+        .where(_.or([
+          { createdBy: wxContext.OPENID },
+          { players: _.elemMatch({ openid: wxContext.OPENID }) }
+        ]))
         .orderBy('updatedAt', 'desc')
         .skip(skip)
         .limit(pageSize)

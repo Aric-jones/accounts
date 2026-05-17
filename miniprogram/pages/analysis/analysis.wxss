@@ -345,16 +345,6 @@
   border-radius: 20rpx;
 }
 
-/* 解锁区域 */
-.unlock-area {
-  padding: 0 32rpx;
-  margin-top: 16rpx;
-}
-
-.btn-unlock {
-  width: 100%;
-}
-
 .bottom-safe {
   height: 40rpx;
 }

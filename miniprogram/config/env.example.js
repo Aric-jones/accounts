@@ -11,7 +11,5 @@ module.exports = {
   // DeepSeek API Key（https://platform.deepseek.com 获取）
   DEEPSEEK_API_KEY: 'sk-xxxxxxxxxxxxxxxx',
 
-  // 广告位ID（UV >= 500 后在微信公众平台 → 流量主 获取）
-  AD_BANNER_ID: 'adunit-xxxxxxxx',
-  AD_REWARDED_VIDEO_ID: 'adunit-xxxxxxxx',
+  // 广告能力当前暂停，后续恢复时再补充广告位配置
 }

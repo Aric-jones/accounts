@@ -1,4 +1,4 @@
-const { showToast, showLoading, hideLoading } = require('../../utils/util')
+const { generateId, getClientId, showToast, showLoading, hideLoading } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 
 Page({
@@ -8,6 +8,7 @@ Page({
     shareCode: '',
     codeChars: [],
     codeLength: 0,
+    inputFocus: true,
     joining: false
   },
 
@@ -37,6 +38,17 @@ Page({
     })
   },
 
+  focusCodeInput() {
+    this.setData({ inputFocus: false })
+    wx.nextTick(() => {
+      this.setData({ inputFocus: true })
+    })
+  },
+
+  onCodeBlur() {
+    this.setData({ inputFocus: false })
+  },
+
   async onJoinRoom() {
     const { shareCode } = this.data
     if (shareCode.length !== 6) {
@@ -47,15 +59,24 @@ Page({
     this.setData({ joining: true })
     showLoading('加入中...')
 
-    // 直接查云端
-    const db = wx.cloud.database()
     try {
-      const res = await db.collection('rooms')
-        .where({ shareCode: shareCode, status: 'playing' })
-        .get()
+      const app = getApp()
+      const userInfo = wx.getStorageSync('userInfo') || {}
+      const player = {
+        id: generateId(),
+        nickname: userInfo.nickName || '牌友',
+        avatarUrl: userInfo.avatarUrl || '',
+        clientId: getClientId(),
+        openid: app.globalData.openid || ''
+      }
+      const res = await wx.cloud.callFunction({
+        name: 'joinRoom',
+        data: { shareCode, player }
+      })
 
-      if (res.data.length > 0) {
-        const room = res.data[0]
+      if (res.result && res.result.code === 0 && res.result.data) {
+        const room = res.result.data
+        const myPlayerId = res.result.myPlayerId
         // 写入本地缓存，支持离线访问
         const localRooms = wx.getStorageSync('localRooms') || []
         const existIdx = localRooms.findIndex(r => r._id === room._id)
@@ -63,13 +84,20 @@ Page({
         else localRooms.unshift(room)
         wx.setStorageSync('localRooms', localRooms)
 
+        if (myPlayerId) {
+          const roomPlayerIds = wx.getStorageSync('roomPlayerIds') || {}
+          roomPlayerIds[room._id] = myPlayerId
+          wx.setStorageSync('roomPlayerIds', roomPlayerIds)
+        }
+
         hideLoading()
         this.setData({ joining: false })
         wx.redirectTo({ url: '/pages/room/room?id=' + room._id })
         return
       }
+      console.warn('加入房间失败:', res.result)
     } catch (e) {
-      console.warn('云查询失败:', e)
+      console.warn('云加入失败:', e)
     }
 
     hideLoading()

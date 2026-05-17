@@ -16,7 +16,7 @@ accounts/
 │   │   ├── history/           # 历史记录
 │   │   ├── analysis/          # AI 数据分析
 │   │   └── profile/           # 个人中心
-│   ├── components/           # 自定义组件（player-card, score-input, ad-banner）
+│   ├── components/           # 自定义组件（player-card, score-input；ad-banner 暂未消费）
 │   ├── utils/                 # 工具模块
 │   │   ├── settlement.js      # 结算算法（贪心最优转账）
 │   │   ├── ai.js              # AI 文案生成（本地模板 + DeepSeek）
@@ -130,8 +130,8 @@ generateAISummary(room, players)    // 生成 AI 摘要文案
 | 实时云同步 | ⚠️ | 部分接入，非完整实现 |
 | 语音播报 | ❌ | 预留接口，未实际接入 |
 | AI 摘要 | ⚠️ | DeepSeek API 可用；本地模板兜底 |
-| AI 分析 | ⚠️ | 本地计算；激励视频解锁完整报告 |
-| 广告 | ❌ | 占位符待填 |
+| AI 分析 | ⚠️ | 本地计算；广告解锁入口已暂停 |
+| 广告 | 暂停 | 页面不展示模拟广告，不调用广告 API |
 
 ## 五、约束规则
 

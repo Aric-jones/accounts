@@ -7,6 +7,11 @@ Page({
     theme: 'light',
     colors: {},
     userInfo: { nickName: '', avatarUrl: '' },
+    cloudStatus: {
+      envId: '',
+      openid: '',
+      enabled: false
+    },
     stats: {
       totalGames: 0,
       totalTxns: 0,
@@ -18,12 +23,40 @@ Page({
   onLoad() {
     applyTheme(this)
     this.loadUserInfo()
+    this.loadCloudStatus()
     this.loadStats()
   },
 
   onShow() {
     applyTheme(this)
     this.loadStats()
+  },
+
+  loadCloudStatus() {
+    const app = getApp()
+    const env = app.globalData.env || {}
+    this.setData({
+      cloudStatus: {
+        envId: env.CLOUD_ENV_ID || '',
+        openid: app.globalData.openid || '',
+        enabled: !!(wx.cloud && env.CLOUD_ENV_ID)
+      }
+    })
+
+    if (wx.cloud && env.CLOUD_ENV_ID && !app.globalData.openid) {
+      wx.cloud.callFunction({ name: 'getHistory', data: { action: 'getOpenid' } })
+        .then(res => {
+          const openid = res.result && res.result.openid
+          if (openid) {
+            app.globalData.openid = openid
+            this.setData({
+              'cloudStatus.openid': openid,
+              'cloudStatus.enabled': true
+            })
+          }
+        })
+        .catch(() => {})
+    }
   },
 
   loadUserInfo() {
@@ -127,10 +160,6 @@ Page({
   onFeedback() {},
 
   onShare() {},
-
-  onAdError(e) {
-    console.warn('广告加载失败:', e.detail)
-  },
 
   onShareAppMessage() {
     return {

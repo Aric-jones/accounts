@@ -13,9 +13,7 @@ Page({
     transfers: [],
     txnCount: 0,
     unitPrice: 1,
-    aiSummary: '',
-    showAd: false,
-    adUnitId: ''
+    aiSummary: ''
   },
 
   onLoad(options) {

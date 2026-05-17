@@ -70,29 +70,8 @@
   <view class="version-info">
     <text>牌记 v1.0.0</text>
     <text class="version-sub">AI智能打牌记账</text>
-  </view>
-
-  <!-- 模拟广告区域 -->
-  <view class="ad-mock-zone">
-    <view class="ad-mock-banner">
-      <view class="ad-mock-badge">广告</view>
-      <view class="ad-mock-body">
-        <view class="ad-mock-icon"></view>
-        <view class="ad-mock-text">
-          <text class="ad-mock-title">品牌推广</text>
-          <text class="ad-mock-desc">Banner广告位 · 个人中心</text>
-        </view>
-      </view>
-    </view>
-    <view class="ad-mock-native">
-      <view class="ad-mock-badge">广告</view>
-      <view class="ad-mock-native-body">
-        <view class="ad-mock-native-img"></view>
-        <view class="ad-mock-native-info">
-          <text class="ad-mock-title">精选推荐</text>
-          <text class="ad-mock-desc">信息流广告位 · 个人中心</text>
-        </view>
-      </view>
-    </view>
+    <text class="version-sub">{{cloudStatus.enabled ? '云开发已配置' : '云开发未配置'}}</text>
+    <text class="version-sub" wx:if="{{cloudStatus.envId}}">环境：{{cloudStatus.envId}}</text>
+    <text class="version-sub" wx:if="{{cloudStatus.openid}}">OpenID：{{cloudStatus.openid}}</text>
   </view>
 </view>

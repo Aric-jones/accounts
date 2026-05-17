@@ -66,29 +66,5 @@
         </view>
       </view>
     </view>
-
-    <!-- 列表中间广告（每3条后插入） -->
-    <view class="ad-mock-inline" wx:if="{{historyList.length >= 3}}">
-      <view class="ad-mock-badge">广告</view>
-      <view class="ad-mock-body">
-        <view class="ad-mock-icon"></view>
-        <view class="ad-mock-text">
-          <text class="ad-mock-title">推荐内容</text>
-          <text class="ad-mock-desc">信息流广告位 · 历史列表</text>
-        </view>
-      </view>
-    </view>
-  </view>
-
-  <!-- 底部广告 -->
-  <view class="ad-mock-bottom">
-    <view class="ad-mock-badge">广告</view>
-    <view class="ad-mock-body">
-      <view class="ad-mock-icon"></view>
-      <view class="ad-mock-text">
-        <text class="ad-mock-title">品牌推广</text>
-        <text class="ad-mock-desc">Banner广告位 · 历史页底部</text>
-      </view>
-    </view>
   </view>
 </view>

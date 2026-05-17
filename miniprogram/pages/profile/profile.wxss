@@ -171,9 +171,3 @@
   opacity: 0.7;
 }
 
-/* 广告位 */
-.ad-area {
-  margin: 0 32rpx;
-  border-radius: 16rpx;
-  overflow: hidden;
-}

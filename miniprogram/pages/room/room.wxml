@@ -19,7 +19,6 @@
     <view class="action-bar">
       <view class="action-left">
         <view class="invite-toggle" bindtap="onToggleInvite" hover-class="btn-hover">{{showInvite ? '收起' : '邀请'}}</view>
-        <view class="add-player-btn" bindtap="onAddPlayer" hover-class="btn-hover">+ 添加</view>
       </view>
       <view class="action-right">
         <view class="voice-btn {{voiceEnabled ? 'active' : ''}}" bindtap="onToggleVoice" hover-class="btn-hover">{{voiceEnabled ? '🔊' : '🔇'}}</view>
@@ -46,7 +45,7 @@
 
     <!-- 玩家列表（横排紧凑） -->
     <view class="players-section">
-      <text class="section-hint">点击玩家=支付 · 点茶=设置抽水 · 点台面=公共池 · <text class="edit-link" bindtap="onEditMyProfile">编辑资料</text></text>
+      <text class="section-hint">点自己=编辑资料 · 点别人=支付 · 点茶=设置抽水 · 点台面=公共池</text>
       <scroll-view scroll-x class="players-scroll">
         <view class="player-chips">
           <!-- 所有角色统一渲染 -->
@@ -87,46 +86,6 @@
         <text>{{showAllTxns ? '收起' : '查看全部 ' + room.transactions.length + ' 笔'}}</text>
       </view>
     </view>
-
-    <!-- ========== 底部40%广告区域 ========== -->
-    <view class="ad-zone">
-      <view class="ad-zone-label">— 广告 —</view>
-
-      <!-- Banner广告 -->
-      <view class="ad-banner">
-        <view class="ad-badge">广告</view>
-        <view class="ad-body">
-          <view class="ad-icon-placeholder"></view>
-          <view class="ad-text-area">
-            <text class="ad-title-text">某某品牌推广</text>
-            <text class="ad-desc-text">Banner广告位 · 点击了解详情</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 原生信息流广告 -->
-      <view class="ad-native">
-        <view class="ad-badge">广告</view>
-        <view class="ad-native-body">
-          <view class="ad-native-img"></view>
-          <view class="ad-native-info">
-            <text class="ad-native-title">精选推荐内容</text>
-            <text class="ad-native-desc">原生信息流广告位，上线后展示真实广告</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 激励视频入口 -->
-      <view class="ad-reward">
-        <view class="ad-badge">广告</view>
-        <view class="ad-reward-content">
-          <text class="ad-reward-icon">🎁</text>
-          <text class="ad-reward-text">看视频领取牌运加成</text>
-          <view class="ad-reward-btn">观看</view>
-        </view>
-      </view>
-    </view>
-
   </view>
 
   <view class="loading-state" wx:if="{{!room}}">
@@ -143,14 +102,10 @@
   </view>
 
   <view class="payer-section">
-    <text class="payer-label">谁在付款：</text>
-    <view class="payer-chips">
-      <view class="payer-chip {{payFrom.id === item.id ? 'active' : ''}} {{payTarget.id === item.id ? 'disabled' : ''}}"
-            wx:for="{{realPlayers}}" wx:key="id"
-            bindtap="onSwitchPayer" data-id="{{item.id}}">
-        <view class="payer-dot" style="background:{{item.color}}"></view>
-        <text>{{item.nickname}}</text>
-      </view>
+    <text class="payer-label">付款人</text>
+    <view class="payer-chip active fixed-payer">
+      <view class="payer-dot" style="background:{{payFrom.color}}"></view>
+      <text>{{payFrom.nickname}}</text>
     </view>
   </view>
 
@@ -212,20 +167,6 @@
   </view>
 
   <button class="btn-primary btn-pay" bindtap="onSaveProfile">保存</button>
-</view>
-
-<!-- ========== 添加玩家弹窗 ========== -->
-<view class="pay-mask" wx:if="{{showAddPlayer}}" bindtap="onCloseAddPlayer"></view>
-<view class="dialog-center {{showAddPlayer ? 'show' : ''}}">
-  <view class="panel-head">
-    <text class="panel-title">添加玩家</text>
-    <view class="panel-close" bindtap="onCloseAddPlayer">✕</view>
-  </view>
-  <view class="add-player-form">
-    <input class="input-field" placeholder="输入玩家昵称" value="{{newPlayerName}}"
-           bindinput="onNewPlayerInput" focus="{{showAddPlayer}}" />
-  </view>
-  <button class="btn-primary btn-pay" bindtap="onConfirmAddPlayer">添加</button>
 </view>
 
 <!-- ========== 茶水费设置弹窗 ========== -->
@@ -369,14 +310,10 @@
   </view>
 
   <view class="payer-section">
-    <text class="payer-label">选择玩家：</text>
-    <view class="payer-chips">
-      <view class="payer-chip {{tableFrom.id === item.id ? 'active' : ''}}"
-            wx:for="{{realPlayers}}" wx:key="id"
-            bindtap="onTablePlayerSelect" data-id="{{item.id}}">
-        <view class="payer-dot" style="background:{{item.color}}"></view>
-        <text>{{item.nickname}}</text>
-      </view>
+    <text class="payer-label">操作人</text>
+    <view class="payer-chip active fixed-payer">
+      <view class="payer-dot" style="background:{{tableFrom.color}}"></view>
+      <text>{{tableFrom.nickname}}</text>
     </view>
   </view>
 

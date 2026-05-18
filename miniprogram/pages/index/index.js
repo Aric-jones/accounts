@@ -1,5 +1,6 @@
 const { GAME_TYPES, formatRelativeTime, getDefaultAvatar, getClientId } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
+const { cleanupExpiredPlayingRooms, isExpiredPlayingRoom } = require('../../utils/room-expiration')
 
 Page({
   data: {
@@ -28,6 +29,7 @@ Page({
 
   async loadRooms() {
     this.setData({ loading: true })
+    await cleanupExpiredPlayingRooms()
     const localRooms = wx.getStorageSync('localRooms') || []
     const roomPlayerIds = wx.getStorageSync('roomPlayerIds') || {}
     const myRoomIds = wx.getStorageSync('myRoomIds') || []
@@ -61,8 +63,10 @@ Page({
 
     const isActiveMyRoom = room => {
       if (!room || room.status !== 'playing') return false
+      if (isExpiredPlayingRoom(room)) return false
       const localRoom = localRoomMap[room._id]
       if (localRoom && localRoom.status !== 'playing') return false
+      if (localRoom && isExpiredPlayingRoom(localRoom)) return false
       return isMyRoom(room) || isMyRoom(localRoom)
     }
 

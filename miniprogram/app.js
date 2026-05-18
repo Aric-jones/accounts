@@ -1,4 +1,5 @@
 const env = require('./config/env')
+const { cleanupExpiredPlayingRooms } = require('./utils/room-expiration')
 
 App({
   onLaunch() {
@@ -11,6 +12,7 @@ App({
       }
     }
     this.globalData.env = env
+    cleanupExpiredPlayingRooms().catch(() => {})
     this.loadTheme()
     this.getUserProfile()
   },

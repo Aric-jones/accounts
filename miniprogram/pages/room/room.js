@@ -1,6 +1,7 @@
 const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureHttpAvatar, resolveCloudFileUrls, shouldRenderAvatar, saveGlobalUserProfile, fetchGlobalUserProfiles } = require('../../utils/util')
 const { calculateNetScores, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
+const { cleanupExpiredPlayingRooms, isExpiredPlayingRoom, removeRoomReferences } = require('../../utils/room-expiration')
 const voice = require('../../utils/voice')
 
 Page({
@@ -128,6 +129,10 @@ Page({
       const idx = localRooms.findIndex(r => r._id === roomId)
       const cloudRoom = res.data
       const room = cloudRoom
+      if (isExpiredPlayingRoom(room)) {
+        this.handleExpiredRoom(room)
+        return
+      }
 
       if (idx >= 0) localRooms[idx] = room
       else localRooms.unshift(room)
@@ -145,6 +150,10 @@ Page({
   async fetchLatestRoom(roomId) {
     const res = await this._db().collection('rooms').doc(roomId).get()
     if (!res.data) throw new Error('room not found')
+    if (isExpiredPlayingRoom(res.data)) {
+      this.handleExpiredRoom(res.data)
+      throw new Error('room expired')
+    }
     this.cacheRoom(res.data)
     this._updateRoomData(res.data)
     return res.data
@@ -317,11 +326,29 @@ Page({
 
   ensureRoomPlaying() {
     const room = this.data.room
+    if (isExpiredPlayingRoom(room)) {
+      this.handleExpiredRoom(room)
+      return false
+    }
     if (room && room.status === 'settled') {
       this.redirectIfSettled(room)
       return false
     }
     return true
+  },
+
+  handleExpiredRoom(room) {
+    if (this._expiredRoomRedirecting) return
+    this._expiredRoomRedirecting = true
+    const roomId = room && room._id
+    if (roomId) removeRoomReferences([roomId])
+    cleanupExpiredPlayingRooms().catch(() => {})
+    showToast('房间已超过24小时，已自动清除')
+    setTimeout(() => {
+      wx.navigateBack({
+        fail: () => wx.switchTab({ url: '/pages/index/index' })
+      })
+    }, 1000)
   },
 
   async syncMyProfileToRoom(room, myPlayerId) {
@@ -910,6 +937,7 @@ Page({
     } catch (err) {
       console.warn('fetch latest room before pay failed', err)
     }
+    if (!this.ensureRoomPlaying()) return
     if (room.status === 'settled') {
       this.redirectIfSettled(room)
       return

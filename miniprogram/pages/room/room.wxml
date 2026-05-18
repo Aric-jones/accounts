@@ -45,7 +45,7 @@
 
     <!-- 玩家列表（横排紧凑） -->
     <view class="players-section">
-      <text class="section-hint">点自己=编辑资料 · 点别人=支付 · 点茶=设置抽水 · 点台面=公共池</text>
+      <text class="section-hint">点自己=编辑资料 | 点别人=支付 | 点茶=设置抽水 | 点台面=公共池</text>
       <scroll-view scroll-x class="players-scroll">
         <view class="player-chips">
           <!-- 所有角色统一渲染 -->

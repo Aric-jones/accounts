@@ -575,7 +575,8 @@ Page({
       cloudUrls,
       cachedKeys: Object.keys(this.avatarUrlMap || {})
     })
-    if (cloudUrls.length === 0) return
+    if (cloudUrls.length === 0 || this._resolvingAvatarUrls) return
+    this._resolvingAvatarUrls = true
 
     resolveCloudFileUrls(cloudUrls).then(map => {
       if (!map || Object.keys(map).length === 0) return
@@ -590,6 +591,8 @@ Page({
       }
     }).catch(err => {
       console.warn('resolve avatar urls failed', err)
+    }).finally(() => {
+      this._resolvingAvatarUrls = false
     })
   },
 
@@ -707,6 +710,9 @@ Page({
   // === Tap Chip (unified) ===
 
   onTapChip(e) {
+    if (this._dialogOpening) return
+    this._dialogOpening = true
+    setTimeout(() => { this._dialogOpening = false }, 500)
     if (!this.ensureRoomPlaying()) return
     const id = e.currentTarget.dataset.id
     if (id === '__table__') return this.onTapTable()
@@ -948,13 +954,15 @@ Page({
 
   async onConfirmPay() {
     if (!this.ensureRoomPlaying()) return
+    if (this._confirmingPay) return
+    this._confirmingPay = true
     const { payTarget, payFrom, payAmount } = this.data
     const amount = Math.min(parseInt(payAmount) || 0, 99999)
-    if (!amount || amount <= 0) return showToast('请输入有效分数')
-    if (!payTarget || !payFrom) return showToast('请选择付款人')
-    if (payFrom.id === payTarget.id) return showToast('不能支付给自己')
+    if (!amount || amount <= 0) { this._confirmingPay = false; return showToast('请输入有效分数') }
+    if (!payTarget || !payFrom) { this._confirmingPay = false; return showToast('请选择付款人') }
+    if (payFrom.id === payTarget.id) { this._confirmingPay = false; return showToast('不能支付给自己') }
 
-    if (payFrom.id !== this.data.myPlayerId) return showToast('只能用自己的身份支付')
+    if (payFrom.id !== this.data.myPlayerId) { this._confirmingPay = false; return showToast('只能用自己的身份支付') }
 
     let room = this.data.room
     try {
@@ -964,6 +972,7 @@ Page({
     }
     if (!this.ensureRoomPlaying()) return
     if (room.status === 'settled') {
+      this._confirmingPay = false
       this.redirectIfSettled(room)
       return
     }
@@ -1014,6 +1023,7 @@ Page({
       if (s >= 100 && p.id === latestPayTarget.id) voice.onBigWinner(p.nickname, s)
       if (s <= -100 && p.id === latestPayFrom.id) voice.onBigLoser(p.nickname, s)
     })
+    this._confirmingPay = false
   },
 
   // === Tea Fee Panel ===
@@ -1164,13 +1174,16 @@ Page({
 
   async onConfirmTable() {
     if (!this.ensureRoomPlaying()) return
+    if (this._confirmingTable) return
+    this._confirmingTable = true
     const { tableDirection, tableFrom, tableAmount, room, tableBalance } = this.data
     const amount = Math.min(parseInt(tableAmount) || 0, 99999)
-    if (!amount || amount <= 0) return showToast('请输入有效分数')
-    if (!tableFrom) return showToast('请选择玩家')
-    if (tableFrom.id !== this.data.myPlayerId) return showToast('只能操作自己的台面')
+    if (!amount || amount <= 0) { this._confirmingTable = false; return showToast('请输入有效分数') }
+    if (!tableFrom) { this._confirmingTable = false; return showToast('请选择玩家') }
+    if (tableFrom.id !== this.data.myPlayerId) { this._confirmingTable = false; return showToast('只能操作自己的台面') }
 
     if (tableDirection === 'take' && amount > tableBalance) {
+      this._confirmingTable = false
       return showToast('台面余额不足（当前' + tableBalance + '分）')
     }
 
@@ -1206,6 +1219,7 @@ Page({
     wx.vibrateShort({ type: 'medium' })
     const actionText = tableDirection === 'pay' ? '放入台面' : '从台面获取'
     showToast(tableFrom.nickname + ' ' + actionText + ' ' + amount + '分')
+    this._confirmingTable = false
   },
 
   onToggleTableHelp() {

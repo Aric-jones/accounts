@@ -1,4 +1,4 @@
-const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureHttpAvatarProfile, resolveCloudFileUrls, shouldRenderAvatar, saveGlobalUserProfile, fetchGlobalUserProfiles } = require('../../utils/util')
+const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureHttpAvatarProfile, resolveCloudFileUrls, shouldRenderAvatar, isRenderableImageUrl, saveGlobalUserProfile, fetchGlobalUserProfiles } = require('../../utils/util')
 const { calculateNetScores, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
 const { cleanupExpiredPlayingRooms, isExpiredPlayingRoom, removeRoomReferences } = require('../../utils/room-expiration')
@@ -203,7 +203,7 @@ Page({
         roomAvatarUrl: p.avatarUrl || '',
         avatarUrl,
         displayAvatarUrl,
-        hasDisplayAvatar: shouldRenderAvatar(avatarUrl, displayAvatarUrl),
+        hasDisplayAvatar: isRenderableImageUrl(displayAvatarUrl),
         color: p.avatarColor || getDefaultAvatar(i),
         totalScore: netScores[p.id] || 0
       }

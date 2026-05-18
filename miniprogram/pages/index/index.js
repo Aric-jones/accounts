@@ -252,6 +252,9 @@ Page({
     if (dx < -40) {
       this.setRoomSwipe(room._id, -144)
       this.justSwipedRoomId = room._id
+    } else if (dx > 40) {
+      this.setRoomSwipe(room._id, 144)
+      this.justSwipedRoomId = room._id
     } else if (Math.abs(dx) > 12) {
       this.setRoomSwipe(room._id, 0)
     }

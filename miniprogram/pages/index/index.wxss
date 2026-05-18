@@ -161,6 +161,10 @@
   left: 0;
 }
 
+.room-delete-right {
+  right: 0;
+}
+
 .room-card {
   background: var(--color-card);
   border-radius: 20rpx;

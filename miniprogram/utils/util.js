@@ -75,6 +75,11 @@ const isCloudFileId = path => !!path && path.startsWith('cloud://')
 
 const isHttpUrl = path => /^https?:\/\//i.test(path || '')
 
+const isTemporaryCloudHttpUrl = path => {
+  if (!isHttpUrl(path)) return false
+  return /\.tcb\.qcloud\.la\//i.test(path) && /[?&]sign=/i.test(path)
+}
+
 const isWxTempFilePath = path => {
   if (!path) return false
   return path.startsWith('wxfile://') ||
@@ -89,6 +94,13 @@ const isLocalFilePath = path => {
   return !isHttpUrl(path)
 }
 
+const isStableAvatarUrl = path => {
+  if (!path) return false
+  if (isCloudFileId(path)) return true
+  if (!isHttpUrl(path)) return false
+  return !isWxTempFilePath(path) && !isTemporaryCloudHttpUrl(path)
+}
+
 const ensureCloudAvatar = async (avatarUrl, ownerId = 'user') => {
   const shouldUpload = isLocalFilePath(avatarUrl)
   logAvatar('ensureCloudAvatar:start', {
@@ -101,6 +113,10 @@ const ensureCloudAvatar = async (avatarUrl, ownerId = 'user') => {
     hasCloudUpload: !!(wx.cloud && typeof wx.cloud.uploadFile === 'function')
   })
 
+  if (isTemporaryCloudHttpUrl(avatarUrl)) {
+    logAvatar('ensureCloudAvatar:skip', { reason: 'expired-or-temporary-cloud-http-url', avatarUrl })
+    return ''
+  }
   if (!shouldUpload) {
     logAvatar('ensureCloudAvatar:skip', { reason: 'not-local-file-path', avatarUrl })
     return avatarUrl || ''
@@ -128,17 +144,6 @@ const ensureCloudAvatar = async (avatarUrl, ownerId = 'user') => {
 const ensureHttpAvatar = async (avatarUrl, ownerId = 'user') => {
   logAvatar('ensureHttpAvatar:start', { avatarUrl, ownerId })
   const storedAvatarUrl = await ensureCloudAvatar(avatarUrl, ownerId)
-  if (storedAvatarUrl && storedAvatarUrl.startsWith('cloud://')) {
-    try {
-      const map = await resolveCloudFileUrls([storedAvatarUrl])
-      const httpUrl = map && map[storedAvatarUrl]
-      logAvatar('ensureHttpAvatar:resolved', { storedAvatarUrl, httpUrl })
-      return httpUrl || storedAvatarUrl
-    } catch (err) {
-      logAvatar('ensureHttpAvatar:resolve-fail', { storedAvatarUrl, err })
-      return storedAvatarUrl
-    }
-  }
   logAvatar('ensureHttpAvatar:done', { avatarUrl, storedAvatarUrl })
   return storedAvatarUrl || ''
 }
@@ -186,6 +191,7 @@ const resolveCloudFileUrls = async (urls) => {
 
 const isRenderableImageUrl = url => {
   if (!url) return false
+  if (isTemporaryCloudHttpUrl(url)) return false
   return isHttpUrl(url)
 }
 
@@ -208,7 +214,7 @@ const shouldRenderAvatar = (avatarUrl, displayAvatarUrl, allowLocalPreview = fal
 const saveGlobalUserProfile = async (profile = {}) => {
   const data = {
     nickName: profile.nickName || '',
-    avatarUrl: profile.avatarUrl || '',
+    avatarUrl: isStableAvatarUrl(profile.avatarUrl) ? profile.avatarUrl : '',
     clientId: profile.clientId || getClientId()
   }
   logAvatar('saveGlobalUserProfile:start', data)
@@ -269,6 +275,8 @@ module.exports = {
   ensureCloudAvatar,
   ensureHttpAvatar,
   resolveCloudFileUrls,
+  isTemporaryCloudHttpUrl,
+  isStableAvatarUrl,
   isRenderableImageUrl,
   isPreviewableImageUrl,
   shouldRenderAvatar,

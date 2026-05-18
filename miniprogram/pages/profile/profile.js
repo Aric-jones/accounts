@@ -1,4 +1,4 @@
-const { ensureHttpAvatar, getClientId, saveGlobalUserProfile, showToast, showLoading, hideLoading } = require('../../utils/util')
+const { ensureHttpAvatar, getClientId, saveGlobalUserProfile, showToast, showLoading, hideLoading, resolveCloudFileUrls, shouldRenderAvatar, isTemporaryCloudHttpUrl } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 const { calculateNetScores } = require('../../utils/settlement')
 
@@ -7,6 +7,7 @@ Page({
     theme: 'light',
     colors: {},
     userInfo: { nickName: '', avatarUrl: '' },
+    displayAvatarUrl: '',
     cloudStatus: {
       envId: '',
       openid: '',
@@ -62,6 +63,25 @@ Page({
   loadUserInfo() {
     const userInfo = wx.getStorageSync('userInfo') || { nickName: '', avatarUrl: '' }
     this.setData({ userInfo })
+    this.resolveProfileAvatar(userInfo.avatarUrl)
+  },
+
+  resolveProfileAvatar(avatarUrl) {
+    if (!avatarUrl) {
+      this.setData({ displayAvatarUrl: '' })
+      return
+    }
+    if (avatarUrl.startsWith('cloud://')) {
+      this.setData({ displayAvatarUrl: '' })
+      resolveCloudFileUrls([avatarUrl]).then(map => {
+        const displayUrl = map && map[avatarUrl]
+        if (displayUrl) this.setData({ displayAvatarUrl: displayUrl })
+      }).catch(err => console.warn('resolve profile avatar failed', err))
+      return
+    }
+    this.setData({
+      displayAvatarUrl: shouldRenderAvatar(avatarUrl, avatarUrl, true) ? avatarUrl : ''
+    })
   },
 
   loadStats() {
@@ -102,7 +122,7 @@ Page({
     const { avatarUrl } = e.detail
     console.log('[avatar][profile] chooseAvatar:selected', { avatarUrl })
     const userInfo = { ...this.data.userInfo, avatarUrl }
-    this.setData({ userInfo })
+    this.setData({ userInfo, displayAvatarUrl: avatarUrl })
     wx.setStorageSync('userInfo', userInfo)
     getApp().globalData.userInfo = userInfo
     try {
@@ -117,6 +137,7 @@ Page({
       this.setData({ userInfo: nextUserInfo })
       wx.setStorageSync('userInfo', nextUserInfo)
       getApp().globalData.userInfo = nextUserInfo
+      this.resolveProfileAvatar(nextUserInfo.avatarUrl)
       saveGlobalUserProfile({
         nickName: nextUserInfo.nickName || '',
         avatarUrl: nextUserInfo.avatarUrl || '',
@@ -143,7 +164,7 @@ Page({
       getApp().globalData.userInfo = userInfo
       saveGlobalUserProfile({
         nickName: userInfo.nickName || '',
-        avatarUrl: userInfo.avatarUrl || '',
+        avatarUrl: isTemporaryCloudHttpUrl(userInfo.avatarUrl) ? '' : (userInfo.avatarUrl || ''),
         clientId: getClientId()
       }).catch(err => console.warn('save global profile failed', err))
     }

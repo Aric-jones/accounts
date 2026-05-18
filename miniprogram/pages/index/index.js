@@ -1,4 +1,4 @@
-const { GAME_TYPES, formatRelativeTime, getDefaultAvatar, getClientId } = require('../../utils/util')
+const { GAME_TYPES, formatRelativeTime, getDefaultAvatar, getClientId, resolveCloudFileUrls, shouldRenderAvatar } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 const { cleanupExpiredPlayingRooms, isExpiredPlayingRoom } = require('../../utils/room-expiration')
 
@@ -7,18 +7,22 @@ Page({
     theme: 'light',
     colors: {},
     userInfo: null,
+    userDisplayAvatarUrl: '',
     activeRooms: [],
     loading: false
   },
 
   onLoad() {
     applyTheme(this)
+    this.avatarUrlMap = {}
   },
 
   onShow() {
     applyTheme(this)
     const app = getApp()
-    this.setData({ userInfo: app.globalData.userInfo })
+    const userInfo = app.globalData.userInfo
+    this.setData({ userInfo })
+    this.resolveUserAvatar(userInfo)
     this.loadRooms()
   },
 
@@ -105,7 +109,7 @@ Page({
         players: _.elemMatch({ openid })
       }).get())
     }
-    if (clientId) {
+    if (!openid && clientId) {
       queries.push(db.collection('rooms').where({
         status: 'playing',
         players: _.elemMatch({ clientId })
@@ -121,6 +125,32 @@ Page({
     }).catch(err => {
       console.error('load active rooms failed', err)
       this.setData({ activeRooms: buildActiveRooms([]), loading: false })
+    })
+  },
+
+  resolveUserAvatar(userInfo) {
+    const avatarUrl = userInfo && userInfo.avatarUrl
+    if (!avatarUrl) {
+      this.setData({ userDisplayAvatarUrl: '' })
+      return
+    }
+    if (avatarUrl.startsWith('cloud://')) {
+      const cached = this.avatarUrlMap && this.avatarUrlMap[avatarUrl]
+      if (cached) {
+        this.setData({ userDisplayAvatarUrl: cached })
+        return
+      }
+      this.setData({ userDisplayAvatarUrl: '' })
+      resolveCloudFileUrls([avatarUrl]).then(map => {
+        const displayUrl = map && map[avatarUrl]
+        if (!displayUrl) return
+        this.avatarUrlMap = { ...(this.avatarUrlMap || {}), ...map }
+        this.setData({ userDisplayAvatarUrl: displayUrl })
+      }).catch(err => console.warn('resolve index avatar failed', err))
+      return
+    }
+    this.setData({
+      userDisplayAvatarUrl: shouldRenderAvatar(avatarUrl, avatarUrl, true) ? avatarUrl : ''
     })
   },
 

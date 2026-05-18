@@ -7,7 +7,7 @@
         <text class="welcome-sub">记录每一局的精彩</text>
       </view>
       <view class="avatar-wrap" bindtap="onTapAvatar">
-        <image wx:if="{{userInfo.avatarUrl}}" src="{{userInfo.avatarUrl}}" mode="aspectFill" class="user-avatar-img" />
+        <image wx:if="{{userDisplayAvatarUrl}}" src="{{userDisplayAvatarUrl}}" mode="aspectFill" class="user-avatar-img" />
         <view wx:else class="user-avatar-placeholder">
           <text>{{userInfo.nickName ? userInfo.nickName[0] : '👤'}}</text>
         </view>

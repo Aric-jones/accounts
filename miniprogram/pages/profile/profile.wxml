@@ -3,7 +3,7 @@
   <view class="profile-header">
     <view class="profile-avatar-area">
       <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
-        <image class="profile-avatar" src="{{userInfo.avatarUrl}}" mode="aspectFill" wx:if="{{userInfo.avatarUrl}}"></image>
+        <image class="profile-avatar" src="{{displayAvatarUrl}}" mode="aspectFill" wx:if="{{displayAvatarUrl}}"></image>
         <view class="profile-avatar-placeholder" wx:else>
           <text>👤</text>
         </view>

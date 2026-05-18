@@ -42,7 +42,7 @@ Page({
       const hiddenMap = {}
       hiddenRoomIds.forEach(id => { hiddenMap[id] = true })
       const roomMap = {}
-      cloudRooms.concat(localRooms).forEach(room => {
+      localRooms.concat(cloudRooms).forEach(room => {
         if (!room || !room._id) return
         if (hiddenMap[room._id]) return
         roomMap[room._id] = {

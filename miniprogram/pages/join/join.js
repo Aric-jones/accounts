@@ -1,4 +1,4 @@
-const { generateId, getClientId, ensureHttpAvatar, saveGlobalUserProfile, showToast, showLoading, hideLoading } = require('../../utils/util')
+const { generateId, getClientId, ensureHttpAvatarProfile, saveGlobalUserProfile, showToast, showLoading, hideLoading } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 
 Page({
@@ -64,6 +64,7 @@ Page({
       const userInfo = wx.getStorageSync('userInfo') || {}
       const clientId = getClientId()
       let avatarUrl = userInfo.avatarUrl || ''
+      let avatarFileId = userInfo.avatarFileId || ''
       console.log('[avatar][join] before-upload', {
         shareCode,
         clientId,
@@ -72,16 +73,19 @@ Page({
         userInfo
       })
       try {
-        avatarUrl = await ensureHttpAvatar(avatarUrl, clientId)
+        const avatarProfile = await ensureHttpAvatarProfile(avatarFileId || avatarUrl, clientId)
+        avatarUrl = avatarProfile.avatarUrl || ''
+        avatarFileId = avatarProfile.avatarFileId || avatarFileId || ''
         console.log('[avatar][join] upload-result', {
           shareCode,
           clientId,
           inputAvatarUrl: userInfo.avatarUrl || '',
           savedAvatarUrl: avatarUrl,
+          avatarFileId,
           uploadSucceeded: avatarUrl !== (userInfo.avatarUrl || '')
         })
-        if (avatarUrl !== userInfo.avatarUrl) {
-          const nextUserInfo = { ...userInfo, avatarUrl }
+        if (avatarUrl !== userInfo.avatarUrl || avatarFileId !== userInfo.avatarFileId) {
+          const nextUserInfo = { ...userInfo, avatarUrl, avatarFileId }
           wx.setStorageSync('userInfo', nextUserInfo)
           app.globalData.userInfo = nextUserInfo
         }
@@ -92,12 +96,14 @@ Page({
       saveGlobalUserProfile({
         nickName: userInfo.nickName || '',
         avatarUrl,
+        avatarFileId,
         clientId
       }).catch(err => console.warn('save global profile failed', err))
       const player = {
         id: generateId(),
         nickname: userInfo.nickName || '牌友',
         avatarUrl,
+        avatarFileId,
         clientId,
         openid: app.globalData.openid || ''
       }

@@ -83,10 +83,13 @@ Page({
 
     const buildActiveRooms = cloudRooms => {
       const roomMap = {}
+      const cloudRoomMap = {}
       ;(cloudRooms || []).forEach(room => {
+        if (room && room._id) cloudRoomMap[room._id] = room
         if (isActiveMyRoom(room)) roomMap[room._id] = pickLatestRoom(room)
       })
       localRooms.forEach(room => {
+        if (cloudRoomMap[room._id] && cloudRoomMap[room._id].status !== 'playing') return
         if (isActiveMyRoom(room) && !roomMap[room._id]) roomMap[room._id] = room
       })
       return Object.keys(roomMap)
@@ -94,6 +97,20 @@ Page({
         .filter(room => room.status === 'playing')
         .sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))
         .map(room => this.formatRoom(room))
+    }
+
+    if (openid && wx.cloud && typeof wx.cloud.callFunction === 'function') {
+      try {
+        const res = await wx.cloud.callFunction({
+          name: 'getHistory',
+          data: { action: 'myRooms', page: 1, pageSize: 100 }
+        })
+        const cloudRooms = (res.result && res.result.data) || []
+        this.setData({ activeRooms: buildActiveRooms(cloudRooms), loading: false })
+        return
+      } catch (err) {
+        console.warn('load my rooms via cloud function failed, fallback to db queries', err)
+      }
     }
 
     const db = wx.cloud.database()
@@ -130,6 +147,25 @@ Page({
 
   resolveUserAvatar(userInfo) {
     const avatarUrl = userInfo && userInfo.avatarUrl
+    const avatarFileId = userInfo && userInfo.avatarFileId
+    if (avatarFileId) {
+      const cached = this.avatarUrlMap && this.avatarUrlMap[avatarFileId]
+      if (cached) {
+        this.setData({ userDisplayAvatarUrl: cached })
+        return
+      }
+      this.setData({ userDisplayAvatarUrl: '' })
+      resolveCloudFileUrls([avatarFileId]).then(map => {
+        const displayUrl = map && map[avatarFileId]
+        if (!displayUrl) return
+        this.avatarUrlMap = { ...(this.avatarUrlMap || {}), ...map }
+        const nextUserInfo = { ...(this.data.userInfo || {}), avatarUrl: displayUrl, avatarFileId }
+        wx.setStorageSync('userInfo', nextUserInfo)
+        getApp().globalData.userInfo = nextUserInfo
+        this.setData({ userInfo: nextUserInfo, userDisplayAvatarUrl: displayUrl })
+      }).catch(err => console.warn('resolve index avatar failed', err))
+      return
+    }
     if (!avatarUrl) {
       this.setData({ userDisplayAvatarUrl: '' })
       return

@@ -143,9 +143,30 @@ const ensureCloudAvatar = async (avatarUrl, ownerId = 'user') => {
 
 const ensureHttpAvatar = async (avatarUrl, ownerId = 'user') => {
   logAvatar('ensureHttpAvatar:start', { avatarUrl, ownerId })
+  const profile = await ensureHttpAvatarProfile(avatarUrl, ownerId)
+  logAvatar('ensureHttpAvatar:done', { avatarUrl, profile })
+  return profile.avatarUrl || ''
+}
+
+const ensureHttpAvatarProfile = async (avatarUrl, ownerId = 'user') => {
   const storedAvatarUrl = await ensureCloudAvatar(avatarUrl, ownerId)
-  logAvatar('ensureHttpAvatar:done', { avatarUrl, storedAvatarUrl })
-  return storedAvatarUrl || ''
+  const avatarFileId = isCloudFileId(storedAvatarUrl) ? storedAvatarUrl : ''
+  if (avatarFileId) {
+    try {
+      const map = await resolveCloudFileUrls([avatarFileId])
+      return {
+        avatarUrl: (map && map[avatarFileId]) || '',
+        avatarFileId
+      }
+    } catch (err) {
+      logAvatar('ensureHttpAvatarProfile:resolve-fail', { avatarFileId, err })
+      return { avatarUrl: '', avatarFileId }
+    }
+  }
+  if (isRenderableImageUrl(storedAvatarUrl)) {
+    return { avatarUrl: storedAvatarUrl, avatarFileId: '' }
+  }
+  return { avatarUrl: '', avatarFileId: '' }
 }
 
 const resolveCloudFileUrls = async (urls) => {
@@ -212,9 +233,18 @@ const shouldRenderAvatar = (avatarUrl, displayAvatarUrl, allowLocalPreview = fal
 }
 
 const saveGlobalUserProfile = async (profile = {}) => {
+  const avatarFileId = isCloudFileId(profile.avatarFileId)
+    ? profile.avatarFileId
+    : (isCloudFileId(profile.avatarUrl) ? profile.avatarUrl : '')
+  const avatarUrl = isHttpUrl(profile.avatarUrl) &&
+    !isWxTempFilePath(profile.avatarUrl) &&
+    (!isTemporaryCloudHttpUrl(profile.avatarUrl) || avatarFileId)
+    ? profile.avatarUrl
+    : ''
   const data = {
     nickName: profile.nickName || '',
-    avatarUrl: isStableAvatarUrl(profile.avatarUrl) ? profile.avatarUrl : '',
+    avatarUrl,
+    avatarFileId,
     clientId: profile.clientId || getClientId()
   }
   logAvatar('saveGlobalUserProfile:start', data)
@@ -274,6 +304,7 @@ module.exports = {
   getClientId,
   ensureCloudAvatar,
   ensureHttpAvatar,
+  ensureHttpAvatarProfile,
   resolveCloudFileUrls,
   isTemporaryCloudHttpUrl,
   isStableAvatarUrl,

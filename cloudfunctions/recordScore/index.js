@@ -12,10 +12,12 @@ exports.main = async (event, context) => {
       if (!wxContext.OPENID) return { code: -1, errMsg: 'openid missing' }
       await ensureCollection('userProfiles')
       const now = new Date()
+      const avatarProfile = await normalizeAvatarProfile(profile)
       const data = {
         openid: wxContext.OPENID,
         nickName: profile.nickName || '',
-        avatarUrl: profile.avatarUrl || '',
+        avatarUrl: avatarProfile.avatarUrl,
+        avatarFileId: avatarProfile.avatarFileId,
         clientId: profile.clientId || '',
         updatedAt: now
       }
@@ -43,7 +45,8 @@ exports.main = async (event, context) => {
       const res = await db.collection('userProfiles')
         .where({ openid: _.in(list) })
         .get()
-      return { code: 0, data: res.data || [] }
+      const data = await refreshProfileAvatarUrls(res.data || [])
+      return { code: 0, data }
     }
 
     if (action === 'saveRoom') {
@@ -171,4 +174,64 @@ async function ensureCollection(name) {
     if (msg.includes('-502001')) return
     throw e
   }
+}
+
+async function normalizeAvatarProfile(profile = {}) {
+  const avatarFileId = isCloudFileId(profile.avatarFileId)
+    ? profile.avatarFileId
+    : (isCloudFileId(profile.avatarUrl) ? profile.avatarUrl : '')
+  let avatarUrl = isHttpUrl(profile.avatarUrl) && (!isTemporaryCloudHttpUrl(profile.avatarUrl) || avatarFileId)
+    ? profile.avatarUrl
+    : ''
+
+  if (avatarFileId) {
+    const map = await getTempFileUrlMap([avatarFileId])
+    avatarUrl = map[avatarFileId] || avatarUrl || ''
+  }
+
+  return {
+    avatarUrl,
+    avatarFileId
+  }
+}
+
+async function refreshProfileAvatarUrls(profiles) {
+  const fileIds = [...new Set((profiles || [])
+    .map(profile => profile.avatarFileId || (isCloudFileId(profile.avatarUrl) ? profile.avatarUrl : ''))
+    .filter(Boolean))]
+  if (fileIds.length === 0) return profiles
+
+  const map = await getTempFileUrlMap(fileIds)
+  return profiles.map(profile => {
+    const avatarFileId = profile.avatarFileId || (isCloudFileId(profile.avatarUrl) ? profile.avatarUrl : '')
+    const avatarUrl = (avatarFileId && map[avatarFileId]) || (isHttpUrl(profile.avatarUrl) ? profile.avatarUrl : '')
+    return {
+      ...profile,
+      avatarFileId,
+      avatarUrl
+    }
+  })
+}
+
+async function getTempFileUrlMap(fileIds) {
+  const list = [...new Set((fileIds || []).filter(isCloudFileId))]
+  if (list.length === 0) return {}
+  const res = await cloud.getTempFileURL({ fileList: list })
+  const map = {}
+  ;(res.fileList || []).forEach(item => {
+    if (item.fileID && item.tempFileURL) map[item.fileID] = item.tempFileURL
+  })
+  return map
+}
+
+function isCloudFileId(value) {
+  return typeof value === 'string' && value.startsWith('cloud://')
+}
+
+function isHttpUrl(value) {
+  return /^https?:\/\//i.test(value || '')
+}
+
+function isTemporaryCloudHttpUrl(value) {
+  return isHttpUrl(value) && /\.tcb\.qcloud\.la\//i.test(value) && /[?&]sign=/i.test(value)
 }

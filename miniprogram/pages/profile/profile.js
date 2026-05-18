@@ -1,4 +1,4 @@
-const { ensureHttpAvatar, getClientId, saveGlobalUserProfile, showToast, showLoading, hideLoading, resolveCloudFileUrls, shouldRenderAvatar, isTemporaryCloudHttpUrl } = require('../../utils/util')
+const { ensureHttpAvatarProfile, getClientId, saveGlobalUserProfile, showToast, showLoading, hideLoading, resolveCloudFileUrls, shouldRenderAvatar, isTemporaryCloudHttpUrl } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
 const { calculateNetScores } = require('../../utils/settlement')
 
@@ -67,6 +67,18 @@ Page({
   },
 
   resolveProfileAvatar(avatarUrl) {
+    const avatarFileId = this.data.userInfo && this.data.userInfo.avatarFileId
+    if (avatarFileId) {
+      resolveCloudFileUrls([avatarFileId]).then(map => {
+        const displayUrl = map && map[avatarFileId]
+        if (!displayUrl) return
+        const userInfo = { ...(this.data.userInfo || {}), avatarUrl: displayUrl, avatarFileId }
+        this.setData({ userInfo, displayAvatarUrl: displayUrl })
+        wx.setStorageSync('userInfo', userInfo)
+        getApp().globalData.userInfo = userInfo
+      }).catch(err => console.warn('resolve profile avatar failed', err))
+      return
+    }
     if (!avatarUrl) {
       this.setData({ displayAvatarUrl: '' })
       return
@@ -127,20 +139,23 @@ Page({
     getApp().globalData.userInfo = userInfo
     try {
       showLoading('上传头像...')
-      const cloudAvatar = await ensureHttpAvatar(avatarUrl, wx.getStorageSync('clientId') || 'profile')
+      const avatarProfile = await ensureHttpAvatarProfile(avatarUrl, wx.getStorageSync('clientId') || 'profile')
+      const cloudAvatar = avatarProfile.avatarUrl || ''
+      const avatarFileId = avatarProfile.avatarFileId || ''
       console.log('[avatar][profile] chooseAvatar:upload-result', {
         inputAvatarUrl: avatarUrl,
         savedAvatarUrl: cloudAvatar,
+        avatarFileId,
         uploadSucceeded: cloudAvatar !== avatarUrl
       })
-      const nextUserInfo = { ...userInfo, avatarUrl: cloudAvatar }
-      this.setData({ userInfo: nextUserInfo })
+      const nextUserInfo = { ...userInfo, avatarUrl: cloudAvatar, avatarFileId }
+      this.setData({ userInfo: nextUserInfo, displayAvatarUrl: cloudAvatar })
       wx.setStorageSync('userInfo', nextUserInfo)
       getApp().globalData.userInfo = nextUserInfo
-      this.resolveProfileAvatar(nextUserInfo.avatarUrl)
       saveGlobalUserProfile({
         nickName: nextUserInfo.nickName || '',
         avatarUrl: nextUserInfo.avatarUrl || '',
+        avatarFileId: nextUserInfo.avatarFileId || '',
         clientId: getClientId()
       }).catch(err => console.warn('save global profile failed', err))
       hideLoading()
@@ -165,6 +180,7 @@ Page({
       saveGlobalUserProfile({
         nickName: userInfo.nickName || '',
         avatarUrl: isTemporaryCloudHttpUrl(userInfo.avatarUrl) ? '' : (userInfo.avatarUrl || ''),
+        avatarFileId: userInfo.avatarFileId || '',
         clientId: getClientId()
       }).catch(err => console.warn('save global profile failed', err))
     }

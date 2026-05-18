@@ -89,6 +89,24 @@ exports.main = async (event, context) => {
     }
   }
 
+  if (action === 'myRooms') {
+    try {
+      const skip = (page - 1) * pageSize
+      const res = await db.collection('rooms')
+        .where(_.or([
+          { createdBy: wxContext.OPENID },
+          { players: _.elemMatch({ openid: wxContext.OPENID }) }
+        ]))
+        .orderBy('updatedAt', 'desc')
+        .skip(skip)
+        .limit(pageSize)
+        .get()
+      return { code: 0, data: res.data || [] }
+    } catch (e) {
+      return { code: -1, errMsg: e.message }
+    }
+  }
+
   if (action === 'history') {
     try {
       const skip = (page - 1) * pageSize

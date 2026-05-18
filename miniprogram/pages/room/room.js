@@ -1,4 +1,4 @@
-const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureHttpAvatar, resolveCloudFileUrls, shouldRenderAvatar, saveGlobalUserProfile, fetchGlobalUserProfiles } = require('../../utils/util')
+const { GAME_TYPES, showToast, getDefaultAvatar, generateId, getClientId, ensureHttpAvatarProfile, resolveCloudFileUrls, shouldRenderAvatar, saveGlobalUserProfile, fetchGlobalUserProfiles } = require('../../utils/util')
 const { calculateNetScores, findWinner } = require('../../utils/settlement')
 const { applyTheme } = require('../../utils/theme')
 const { cleanupExpiredPlayingRooms, isExpiredPlayingRoom, removeRoomReferences } = require('../../utils/room-expiration')
@@ -376,10 +376,15 @@ Page({
     this._syncingProfile = true
     try {
       let nextAvatarUrl = player.avatarUrl || ''
+      let nextAvatarFileId = player.avatarFileId || userInfo.avatarFileId || ''
       if (localAvatarUrl && localAvatarUrl !== player.avatarUrl) {
-        nextAvatarUrl = await ensureHttpAvatar(localAvatarUrl, player.id || getClientId())
+        const avatarProfile = await ensureHttpAvatarProfile(userInfo.avatarFileId || localAvatarUrl, player.id || getClientId())
+        nextAvatarUrl = avatarProfile.avatarUrl || ''
+        nextAvatarFileId = avatarProfile.avatarFileId || nextAvatarFileId
       } else if (player.avatarUrl) {
-        nextAvatarUrl = await ensureHttpAvatar(player.avatarUrl, player.id || getClientId())
+        const avatarProfile = await ensureHttpAvatarProfile(player.avatarFileId || player.avatarUrl, player.id || getClientId())
+        nextAvatarUrl = avatarProfile.avatarUrl || player.avatarUrl || ''
+        nextAvatarFileId = avatarProfile.avatarFileId || nextAvatarFileId
       }
 
       let changed = false
@@ -389,6 +394,10 @@ Page({
       }
       if (nextAvatarUrl && nextAvatarUrl !== player.avatarUrl) {
         player.avatarUrl = nextAvatarUrl
+        changed = true
+      }
+      if (nextAvatarFileId && nextAvatarFileId !== player.avatarFileId) {
+        player.avatarFileId = nextAvatarFileId
         changed = true
       }
 
@@ -407,6 +416,7 @@ Page({
       saveGlobalUserProfile({
         nickName: player.nickname || '',
         avatarUrl: player.avatarUrl || '',
+        avatarFileId: player.avatarFileId || '',
         clientId: player.clientId || getClientId()
       }).catch(err => console.warn('save global profile failed', err))
 
@@ -444,7 +454,9 @@ Page({
         myPlayerId,
         currentAvatarUrl: player.avatarUrl
       })
-      const avatarUrl = await ensureHttpAvatar(player.avatarUrl, player.id || getClientId())
+      const avatarProfile = await ensureHttpAvatarProfile(player.avatarFileId || player.avatarUrl, player.id || getClientId())
+      const avatarUrl = avatarProfile.avatarUrl || ''
+      const avatarFileId = avatarProfile.avatarFileId || player.avatarFileId || ''
       if (avatarUrl && avatarUrl !== player.avatarUrl) {
         console.log('[avatar][room] repairMyLocalAvatar:save', {
           roomId: room._id,
@@ -453,6 +465,7 @@ Page({
           nextAvatarUrl: avatarUrl
         })
         player.avatarUrl = avatarUrl
+        if (avatarFileId) player.avatarFileId = avatarFileId
         await this.saveRoom(room, { updateFields: ['players'] })
       } else {
         console.log('[avatar][room] repairMyLocalAvatar:no-change', {
@@ -787,8 +800,11 @@ Page({
           }
         })
         let avatarUrl = tempPath
+        let avatarFileId = editPlayer.avatarFileId || ''
         try {
-          avatarUrl = await ensureHttpAvatar(tempPath, editPlayer.id || getClientId())
+          const avatarProfile = await ensureHttpAvatarProfile(tempPath, editPlayer.id || getClientId())
+          avatarUrl = avatarProfile.avatarUrl || ''
+          avatarFileId = avatarProfile.avatarFileId || avatarFileId || ''
         } catch (err) {
           console.warn('upload avatar failed', err)
           console.log('[avatar][room] onChooseAvatar:upload-fail', {
@@ -799,11 +815,15 @@ Page({
           })
         }
         const p = room.players.find(pl => pl.id === editPlayer.id)
-        if (p) p.avatarUrl = avatarUrl
+        if (p) {
+          p.avatarUrl = avatarUrl
+          p.avatarFileId = avatarFileId
+        }
         console.log('[avatar][room] onChooseAvatar:saveRoom', {
           roomId: room && room._id,
           playerId: editPlayer && editPlayer.id,
           savedAvatarUrl: avatarUrl,
+          avatarFileId,
           uploadSucceeded: avatarUrl !== tempPath
         })
         await this.saveRoom(room, { updateFields: ['players'] })
@@ -831,13 +851,15 @@ Page({
         saveGlobalUserProfile({
           nickName: this.data.editName || editPlayer.nickname || '',
           avatarUrl,
+          avatarFileId,
           clientId: editPlayer.clientId || getClientId()
         }).catch(err => console.warn('save global profile failed', err))
         const localUserInfo = wx.getStorageSync('userInfo') || {}
         const nextUserInfo = {
           ...localUserInfo,
           nickName: this.data.editName || editPlayer.nickname || localUserInfo.nickName || '',
-          avatarUrl
+          avatarUrl,
+          avatarFileId
         }
         wx.setStorageSync('userInfo', nextUserInfo)
         getApp().globalData.userInfo = nextUserInfo
@@ -853,6 +875,7 @@ Page({
           editPlayer: {
             ...editPlayer,
             avatarUrl,
+            avatarFileId,
             displayAvatarUrl,
             hasDisplayAvatar: shouldRenderAvatar(avatarUrl, displayAvatarUrl, true)
           }
@@ -881,13 +904,15 @@ Page({
     saveGlobalUserProfile({
       nickName: name,
       avatarUrl: p ? (p.avatarUrl || '') : (editPlayer.avatarUrl || ''),
+      avatarFileId: p ? (p.avatarFileId || '') : (editPlayer.avatarFileId || ''),
       clientId: editPlayer.clientId || getClientId()
     }).catch(err => console.warn('save global profile failed', err))
     const localUserInfo = wx.getStorageSync('userInfo') || {}
     const nextUserInfo = {
       ...localUserInfo,
       nickName: name,
-      avatarUrl: p ? (p.avatarUrl || localUserInfo.avatarUrl || '') : (editPlayer.avatarUrl || localUserInfo.avatarUrl || '')
+      avatarUrl: p ? (p.avatarUrl || localUserInfo.avatarUrl || '') : (editPlayer.avatarUrl || localUserInfo.avatarUrl || ''),
+      avatarFileId: p ? (p.avatarFileId || localUserInfo.avatarFileId || '') : (editPlayer.avatarFileId || localUserInfo.avatarFileId || '')
     }
     wx.setStorageSync('userInfo', nextUserInfo)
     getApp().globalData.userInfo = nextUserInfo

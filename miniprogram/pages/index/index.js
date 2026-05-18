@@ -1,6 +1,6 @@
 const { GAME_TYPES, formatRelativeTime, getDefaultAvatar, getClientId, resolveCloudFileUrls, shouldRenderAvatar } = require('../../utils/util')
 const { applyTheme } = require('../../utils/theme')
-const { cleanupExpiredPlayingRooms, isExpiredPlayingRoom } = require('../../utils/room-expiration')
+const { cleanupExpiredPlayingRooms, isExpiredPlayingRoom, removeRoomReferences } = require('../../utils/room-expiration')
 
 Page({
   data: {
@@ -202,9 +202,81 @@ Page({
       gameIcon: gameInfo.icon,
       players,
       txnCount,
+      canDelete: this.isCreatedByMe(room),
+      swipeX: 0,
       timeAgo: formatRelativeTime(new Date(room.updatedAt || room.createdAt)),
       winner: room.winner || null
     }
+  },
+
+  isCreatedByMe(room) {
+    if (!room) return false
+    const app = getApp()
+    const openid = app.globalData.openid || ''
+    const clientId = getClientId()
+    if (openid && room.createdBy === openid) return true
+    return (room.players || []).some(player => {
+      if (!player || !player.isCreator) return false
+      if (openid && player.openid === openid) return true
+      return clientId && player.clientId === clientId
+    })
+  },
+
+  onRoomTouchStart(e) {
+    const room = e.currentTarget.dataset.room
+    if (!room || !room.canDelete) return
+    this.touchRoomId = room._id
+    this.touchStartX = e.touches && e.touches[0] ? e.touches[0].clientX : 0
+    this.touchStartY = e.touches && e.touches[0] ? e.touches[0].clientY : 0
+    this.touchMoved = false
+  },
+
+  onRoomTouchMove(e) {
+    if (!this.touchRoomId) return
+    const touch = e.touches && e.touches[0]
+    if (!touch) return
+    const dx = touch.clientX - this.touchStartX
+    const dy = touch.clientY - this.touchStartY
+    if (Math.abs(dy) > Math.abs(dx)) return
+    if (Math.abs(dx) > 12) this.touchMoved = true
+  },
+
+  onRoomTouchEnd(e) {
+    const room = e.currentTarget.dataset.room
+    if (!room || !room.canDelete || this.touchRoomId !== room._id) {
+      this.resetTouchState()
+      return
+    }
+    const touch = e.changedTouches && e.changedTouches[0]
+    const dx = touch ? touch.clientX - this.touchStartX : 0
+    if (dx < -40) {
+      this.setRoomSwipe(room._id, -144)
+      this.justSwipedRoomId = room._id
+    } else if (dx > 40) {
+      this.setRoomSwipe(room._id, 144)
+      this.justSwipedRoomId = room._id
+    } else if (Math.abs(dx) > 12) {
+      this.setRoomSwipe(room._id, 0)
+    }
+    setTimeout(() => {
+      if (this.justSwipedRoomId === room._id) this.justSwipedRoomId = ''
+    }, 300)
+    this.resetTouchState()
+  },
+
+  resetTouchState() {
+    this.touchRoomId = ''
+    this.touchStartX = 0
+    this.touchStartY = 0
+    this.touchMoved = false
+  },
+
+  setRoomSwipe(roomId, swipeX) {
+    const activeRooms = (this.data.activeRooms || []).map(room => ({
+      ...room,
+      swipeX: room._id === roomId ? swipeX : 0
+    }))
+    this.setData({ activeRooms })
   },
 
   onCreateRoom() {
@@ -217,6 +289,10 @@ Page({
 
   onEnterRoom(e) {
     const room = e.currentTarget.dataset.room
+    if (this.justSwipedRoomId === room._id || room.swipeX !== 0) {
+      this.setRoomSwipe(room._id, 0)
+      return
+    }
     if (room.status === 'playing') {
       wx.navigateTo({ url: '/pages/room/room?id=' + room._id })
     } else {
@@ -230,5 +306,47 @@ Page({
 
   onTapAvatar() {
     wx.switchTab({ url: '/pages/profile/profile' })
+  },
+
+  onDeleteRoom(e) {
+    const room = e.currentTarget.dataset.room
+    if (!room || !room.canDelete) return
+    wx.showModal({
+      title: '删除房间',
+      content: '确定删除“' + (room.name || '未命名房间') + '”？删除后其他人也无法继续进入。',
+      confirmText: '删除',
+      confirmColor: '#EF4444',
+      success: async (res) => {
+        if (!res.confirm) {
+          this.setRoomSwipe(room._id, 0)
+          return
+        }
+        try {
+          if (wx.cloud && typeof wx.cloud.callFunction === 'function') {
+            const result = await wx.cloud.callFunction({
+              name: 'getHistory',
+              data: {
+                action: 'deleteOwnedRoom',
+                roomId: room._id,
+                clientId: getClientId()
+              }
+            })
+            if (!result.result || result.result.code !== 0) {
+              const errMsg = (result.result && result.result.errMsg) || 'delete failed'
+              if (!errMsg.includes('room not found')) throw new Error(errMsg)
+            }
+          }
+          removeRoomReferences([room._id])
+          this.setData({
+            activeRooms: (this.data.activeRooms || []).filter(item => item._id !== room._id)
+          })
+          wx.showToast({ title: '已删除', icon: 'success' })
+        } catch (err) {
+          console.warn('delete owned room failed', err)
+          this.setRoomSwipe(room._id, 0)
+          wx.showToast({ title: '删除失败', icon: 'none' })
+        }
+      }
+    })
   }
 })

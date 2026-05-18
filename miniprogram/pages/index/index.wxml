@@ -35,17 +35,30 @@
       <text class="section-title">进行中</text>
       <view class="section-badge">{{activeRooms.length}}</view>
     </view>
-    <view class="room-card active-room" wx:for="{{activeRooms}}" wx:key="_id" bindtap="onEnterRoom" data-room="{{item}}" hover-class="card-hover">
-      <view class="room-card-top">
-        <view class="room-name-row">
-          <text class="room-game-icon">{{item.gameIcon}}</text>
-          <text class="room-name">{{item.name}}</text>
+    <view class="room-swipe-item" wx:for="{{activeRooms}}" wx:key="_id">
+      <view wx:if="{{item.canDelete}}" class="room-delete-action room-delete-left" catchtap="onDeleteRoom" data-room="{{item}}">删除</view>
+      <view wx:if="{{item.canDelete}}" class="room-delete-action room-delete-right" catchtap="onDeleteRoom" data-room="{{item}}">删除</view>
+      <view
+        class="room-card active-room"
+        style="transform: translateX({{item.swipeX || 0}}rpx);"
+        bindtap="onEnterRoom"
+        bindtouchstart="onRoomTouchStart"
+        bindtouchmove="onRoomTouchMove"
+        bindtouchend="onRoomTouchEnd"
+        data-room="{{item}}"
+        hover-class="card-hover"
+      >
+        <view class="room-card-top">
+          <view class="room-name-row">
+            <text class="room-game-icon">{{item.gameIcon}}</text>
+            <text class="room-name">{{item.name}}</text>
+          </view>
+          <view class="tag tag-playing">进行中</view>
         </view>
-        <view class="tag tag-playing">进行中</view>
-      </view>
-      <view class="room-card-body">
-        <text class="room-meta-text">{{item.players.length}}人 · {{item.txnCount}}笔</text>
-        <text class="room-time">{{item.timeAgo}}</text>
+        <view class="room-card-body">
+          <text class="room-meta-text">{{item.players.length}}人 · {{item.txnCount}}笔</text>
+          <text class="room-time">{{item.timeAgo}}</text>
+        </view>
       </view>
     </view>
   </view>

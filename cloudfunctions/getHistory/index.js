@@ -54,6 +54,23 @@ exports.main = async (event, context) => {
     }
   }
 
+  if (action === 'deleteOwnedRoom') {
+    try {
+      const roomId = event.roomId
+      if (!roomId) return { code: -1, errMsg: 'roomId missing' }
+      const res = await db.collection('rooms').doc(roomId).get()
+      const room = res.data
+      if (!room) return { code: -1, errMsg: 'room not found' }
+      if (!isRoomCreator(room, wxContext.OPENID, event.clientId)) {
+        return { code: -1, errMsg: 'only creator can delete room' }
+      }
+      await db.collection('rooms').doc(roomId).remove()
+      return { code: 0, data: { roomId } }
+    } catch (e) {
+      return { code: -1, errMsg: e.message }
+    }
+  }
+
   if (action === 'cleanupExpiredRooms') {
     try {
       const now = new Date()
@@ -148,4 +165,14 @@ function isExpiredPlayingRoom(room, now) {
   if (!room || room.status !== 'playing') return false
   const createdTime = parseTime(room.createdAt)
   return createdTime > 0 && now - createdTime >= ROOM_EXPIRATION_MS
+}
+
+function isRoomCreator(room, openid, clientId) {
+  if (!room) return false
+  if (openid && room.createdBy === openid) return true
+  return (room.players || []).some(player => {
+    if (!player || !player.isCreator) return false
+    if (openid && player.openid === openid) return true
+    return clientId && player.clientId === clientId
+  })
 }

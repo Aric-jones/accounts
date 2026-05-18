@@ -51,7 +51,8 @@ Page({
     applyTheme(this)
     voice.init()
     this.setData({ voiceEnabled: voice.isEnabled() })
-    this.avatarUrlMap = {}
+    const app = getApp()
+    this.avatarUrlMap = app.globalData.avatarUrlMap || {}
     this.globalProfileMap = {}
     if (options.id) {
       this.roomId = options.id
@@ -552,6 +553,7 @@ Page({
     resolveCloudFileUrls(cloudUrls).then(map => {
       if (!map || Object.keys(map).length === 0) return
       this.avatarUrlMap = { ...(this.avatarUrlMap || {}), ...map }
+      getApp().globalData.avatarUrlMap = this.avatarUrlMap
       console.log('[avatar][room] resolveAvatarUrls:map', {
         roomId: room && room._id,
         map
@@ -581,6 +583,7 @@ Page({
     resolveCloudFileUrls(cloudUrls).then(map => {
       if (!map || Object.keys(map).length === 0) return
       this.avatarUrlMap = { ...(this.avatarUrlMap || {}), ...map }
+      getApp().globalData.avatarUrlMap = this.avatarUrlMap
       console.log('[avatar][room] resolveRoomAvatarUrls:map', {
         roomId: room && room._id,
         map

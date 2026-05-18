@@ -21,6 +21,7 @@ App({
     userInfo: null,
     openid: '',
     theme: 'light',
+    avatarUrlMap: {},
     themeColors: {
       light: {
         primary: '#1A6B4A',

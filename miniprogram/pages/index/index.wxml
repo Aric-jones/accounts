@@ -37,7 +37,6 @@
     </view>
     <view class="room-swipe-item" wx:for="{{activeRooms}}" wx:key="_id">
       <view wx:if="{{item.canDelete}}" class="room-delete-action room-delete-left" catchtap="onDeleteRoom" data-room="{{item}}">删除</view>
-      <view wx:if="{{item.canDelete}}" class="room-delete-action room-delete-right" catchtap="onDeleteRoom" data-room="{{item}}">删除</view>
       <view
         class="room-card active-room"
         style="transform: translateX({{item.swipeX || 0}}rpx);"
